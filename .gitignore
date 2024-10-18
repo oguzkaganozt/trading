@@ -1,0 +1,19 @@
+credentials.json
+/__pycache__
+
+# Environment variables
+.env
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE specific files
+.vscode/
+.idea/
+
+# Python virtual environment
+venv/
