@@ -19,18 +19,22 @@ def get_api_key():
 REST_API_KEY = get_api_key()
 
 def polygon_request(url, params):
-    response = requests.get(url, params=params)
-    print(response.request.url)
-    if response.status_code == 200:
-        data = response.json()
-        # if 'next_url' in data:
-        #     print(f"Next URL available for pagination")
-        if 'results' in data and 'values' in data['results']:
-            return data['results']['values']
+    try:
+        response = requests.get(url, params=params)
+        print(response.request.url)
+        if response.status_code == 200:
+            data = response.json()
+            # if 'next_url' in data:
+            #     print(f"Next URL available for pagination")
+            if 'results' in data and 'values' in data['results']:
+                return data['results']['values']
+            else:
+                return data['results']
         else:
-            return data['results']
-    else:
-        print(f"API request failed with status code: {response.status_code}")
+            print(f"API request failed with status code: {response.status_code}")
+            return None
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed: {e}")
         return None
 
 def get_symbol_details(symbol):
@@ -59,15 +63,20 @@ def get_symbols():
     else:
         return None
 
-def get_ohlc(symbol, multiplier, timespan, from_date, to_date):
+def get_ohlc(symbol, timespan, multiplier, limit=60, from_date=int((datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365)).timestamp() * 1000), to_date=int(datetime.datetime.now(datetime.timezone.utc).timestamp() * 1000)):
     url = f"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/{multiplier}/{timespan}/{from_date}/{to_date}"
     params = {
         "adjusted": "true",
         "apiKey": REST_API_KEY,
-        "sort": "asc"
+        "sort": "desc"
     }
     
     data = polygon_request(url, params)
+
+    # Tail the data to get the last limit entries
+    if len(data) > limit:
+        data = data[:limit]
+
     if data:
         for entry in data:
             entry['date'] = datetime.datetime.fromtimestamp(entry['t'] / 1000).strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -75,9 +84,63 @@ def get_ohlc(symbol, multiplier, timespan, from_date, to_date):
     else:
         return None
 
-def get_rsi(symbol, timespan, limit, series_type="close"):
-    url = f"https://api.polygon.io/v1/indicators/rsi/{symbol}"
-    params = {
+def calculate_rsi(symbol, timespan, multiplier, limit=60, series_type="close", window=14):
+    ohlc_data = get_ohlc(symbol, timespan, multiplier, limit=limit + window)
+    if not ohlc_data:
+        return None
+
+    if series_type == "close":
+        series_type = "c"
+    elif series_type == "open":
+        series_type = "o"
+    elif series_type == "high":
+        series_type = "h"
+    elif series_type == "low":
+        series_type = "l"
+
+    # Extract the closing prices
+    closes = [entry[series_type] for entry in ohlc_data]
+
+    # Calculate price changes
+    deltas = [close - closes[i + 1] for i, close in enumerate(closes[:-1])]
+
+    # Separate gains and losses
+    gains = [delta if delta > 0 else 0 for delta in deltas]
+    losses = [-delta if delta < 0 else 0 for delta in deltas]
+
+    # Calculate average gains and losses
+    avg_gain = sum(gains[:window]) / window
+    avg_loss = sum(losses[:window]) / window
+
+    # Calculate RSI for each period
+    rsi_values = []
+    for i in range(window, len(closes)):
+        if i > window:
+            avg_gain = (avg_gain * (window - 1) + gains[i - 1]) / window
+            avg_loss = (avg_loss * (window - 1) + losses[i - 1]) / window
+
+        if avg_loss == 0:
+            rsi = 100
+        else:
+            rs = avg_gain / avg_loss
+            rsi = 100 - (100 / (1 + rs))
+
+        rsi_values.append({
+            'timestamp': ohlc_data[i]['t'],
+            'value': rsi,
+            'date': ohlc_data[i]['date']
+        })
+
+    # Return the last 'limit' RSI values
+    return rsi_values[-limit:]
+    
+
+def get_rsi(symbol, timespan, multiplier, limit=60, series_type="close"):
+    if multiplier > 1:
+        return calculate_rsi(symbol, timespan, multiplier, limit=limit, series_type=series_type)
+    else:
+        url = f"https://api.polygon.io/v1/indicators/rsi/{symbol}"
+        params = {
         "timespan": timespan,
         "window": 14,
         "series_type": series_type,
@@ -87,22 +150,22 @@ def get_rsi(symbol, timespan, limit, series_type="close"):
     }
     
     data = polygon_request(url, params)
+
     if data:
-        data.reverse()  # Reverse the list to get the most recent data first
         for entry in data:
             entry['date'] = datetime.datetime.fromtimestamp(entry['timestamp'] / 1000).strftime('%Y-%m-%dT%H:%M:%SZ')
         return data
     else:
         return None
 
-def get_sma(symbol, timespan, limit, window=50, series_type="close"):
+def get_sma(symbol, timespan, multiplier, limit=60, window=50, series_type="close"):
     url = f"https://api.polygon.io/v1/indicators/sma/{symbol}"
     params = {
         "timespan": timespan,
         "window": window,
         "series_type": series_type,
         "order": "desc",
-        "limit": limit,
+        "limit": limit * multiplier,
         "apiKey": REST_API_KEY
     }
     
@@ -115,7 +178,7 @@ def get_sma(symbol, timespan, limit, window=50, series_type="close"):
     else:
         return None
 
-def get_ema(symbol, timespan, limit, window=50, series_type="close"):
+def get_ema(symbol, timespan, multiplier, limit=60, window=50, series_type="close"):
     url = f"https://api.polygon.io/v1/indicators/ema/{symbol}"
     params = {
         "timespan": timespan,
@@ -158,7 +221,7 @@ def get_macd(symbol, timespan, limit, short_window=12, long_window=26, signal_wi
         return None
 
 # Get Bollinger Bands by using get_ohlc and calculate from the close price
-def get_bb(symbol, timespan, limit, window=20, series_type="close"):
+def get_bbands(symbol, timespan, multiplier, limit=60, window=20, series_type="close"):
     # Get OHLC data
     from_date = (datetime.datetime.now() - datetime.timedelta(days=365)).strftime('%Y-%m-%d')
     to_date = datetime.datetime.now().strftime('%Y-%m-%d')

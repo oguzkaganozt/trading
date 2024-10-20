@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 import logging
-from polygon_api import get_ohlc, get_rsi, get_macd, get_ema, get_sma, get_bb, get_news, get_symbol_details
+from polygon_api import get_ohlc, get_rsi, get_macd, get_ema, get_sma, get_bbands, get_news, get_symbol_details
 import datetime
-
+from time import sleep
 # A base class for all strategies
 class Strategy(ABC):
-    def __init__(self, name, symbol, balance, timeframe, multiplier, stop_loss_percentage, risk_percentage, take_profit_percentage):
+    def __init__(self, name, symbol, balance, timeframe, multiplier, stop_loss_percentage=None, risk_percentage=None, take_profit_percentage=None):
         self.name = name
         self.symbol = symbol
         self.timeframe = timeframe
@@ -73,31 +73,6 @@ class Strategy(ABC):
         self.logger.addHandler(fh)
         self.logger.addHandler(ch)
 
-    # Run strategy
-    def run(self, backtest=False):
-        if not self.active:
-            self.logger.warning("Strategy is not active. Skipping run.")
-            return
-
-        try:
-            if not backtest:
-                self.update_indicators()
-
-            if self.position is None:
-                entry_signal = self.check_entry()
-                if entry_signal == "long":
-                    self.long()
-                elif entry_signal == "short":
-                    self.short()
-            else:
-                if self.check_exit() == "close":
-                    self.close_position()
-                self.check_trailing_stop_loss()
-                self.check_trailing_take_profit()
-        except Exception as e:
-            self.logger.error(f"Error during strategy execution: {str(e)}")
-            self.active = False
-
     # Check entry
     @abstractmethod
     def check_entry(self):
@@ -107,7 +82,127 @@ class Strategy(ABC):
     @abstractmethod
     def check_exit(self):
         pass
+
+    # Run strategy
+    def run(self):
+        if not self.active:
+            self.logger.warning("Strategy is not active. Skipping run.")
+            return
+
+        def run_strategy():
+            try:
+                self.update_indicators()
+
+                if self.position is None:
+                    entry_signal = self.check_entry()
+                    if entry_signal == "long":
+                        self.long()
+                    elif entry_signal == "short":
+                        self.short()
+                else:
+                    if self.check_exit():
+                        print("Stub - Closing position")
+                        print(f"  - Symbol: {self.symbol}")
+                        print(f"  - Close price: {self.ohlc['c'][-1]}")
+                        print(f"  - Timeframe: {self.timeframe}")
+                        print(f"  - Multiplier: {self.multiplier}")
+                        #self.close_position()
+                    #self.check_trailing_stop_loss()
+                    #self.check_trailing_take_profit()
+            except Exception as e:
+                self.logger.error(f"Error during strategy execution: {str(e)}")
+                self.active = False
+            
+            sleep(self.timeframe * self.multiplier)
+
+        from threading import Thread
+        thread = Thread(target=run_strategy)
+        thread.start()
     
+    # Long position
+    def long(self):
+        self.position = "long"
+        print("Stub - Entering long position")
+        print(f"  - Symbol: {self.symbol}")
+        print(f"  - Entry price: {self.entry_price}")
+        print(f"  - Timeframe: {self.timeframe}")
+        print(f"  - Multiplier: {self.multiplier}")
+        #self.calculate_position_size()
+        #self.execute_trade("long", self.position_size)
+
+    # Short position
+    def short(self):
+        self.position = "short"
+        print("Stub - Entering short position")
+        print(f"  - Symbol: {self.symbol}")
+        print(f"  - Timeframe: {self.timeframe}")
+        print(f"  - Multiplier: {self.multiplier}")
+        print(f"  - Entry price: {self.entry_price}")
+        #self.calculate_position_size()
+        #self.execute_trade("short", self.position_size)
+
+    # Close position
+    def close_position(self):
+        if self.position is not None:
+            close_price = self.ohlc['c'][-1]
+            self.execute_trade("close", self.position_size)
+            
+            # Calculate profit/loss for the final close
+            if self.position == "long":
+                final_profit_loss = (close_price - self.entry_price) * self.position_size
+            else:  # short position
+                final_profit_loss = (self.entry_price - close_price) * self.position_size
+            
+            # Calculate total profit/loss including partial closes
+            total_profit_loss = final_profit_loss
+            for trade in self.trade_history:
+                if trade['action'].startswith('partial close'):
+                    total_profit_loss += trade['profit_loss']
+            
+            # Determine if it's a win or loss based on total profit/loss
+            trade_result = "win" if total_profit_loss > 0 else "loss"
+            
+            self.log_trade("close", close_price, self.position_size, total_profit_loss, trade_result)
+            self.position = None
+            self.position_size = 0
+            self.balance += total_profit_loss  # Update balance
+        else:
+            self.logger.warning("Attempted to close position, but no position is open")
+    
+    # Partial close position
+    def partial_close(self, percentage, reason):
+        if self.position is None:
+            self.logger.warning(f"Cannot partially close: no position open")
+            return
+
+        close_price = self.ohlc['c'][-1]
+        close_size = self.position_size * (percentage / 100)
+        remaining_size = self.position_size - close_size
+
+        # Calculate profit/loss for this partial close
+        if self.position == "long":
+            profit_loss = (close_price - self.entry_price) * close_size
+        else:  # short position
+            profit_loss = (self.entry_price - close_price) * close_size
+
+        self.logger.info(f"{reason} - Partially closing {percentage}% of position")
+        self.log_trade(f"partial close ({reason})", close_price, close_size, profit_loss)
+
+        # Update position size and balance
+        self.position_size = remaining_size
+        self.balance += profit_loss
+
+        if remaining_size == 0:
+            self.position = None
+            self.logger.info("Position fully closed")
+        else:
+            self.logger.info(f"Remaining position size: {remaining_size}")
+        
+        self.execute_trade("partial close", close_size)
+
+        # Adjust entry price after partial close
+        self.adjust_entry_price()
+
     # Check trailing stop loss
     def check_trailing_stop_loss(self, close_percentage=50):
         if self.position == "long":
@@ -234,80 +329,6 @@ class Strategy(ABC):
             self.logger.error(f"Error calculating position size: {str(e)}")
             raise
 
-    # Long position
-    def long(self):
-        self.position = "long"
-        self.calculate_position_size()
-        self.execute_trade("long", self.position_size)
-
-    # Short position
-    def short(self):
-        self.position = "short"
-        self.calculate_position_size()
-        self.execute_trade("short", self.position_size)
-
-    # Close position
-    def close_position(self):
-        if self.position is not None:
-            close_price = self.ohlc['c'][-1]
-            self.execute_trade("close", self.position_size)
-            
-            # Calculate profit/loss for the final close
-            if self.position == "long":
-                final_profit_loss = (close_price - self.entry_price) * self.position_size
-            else:  # short position
-                final_profit_loss = (self.entry_price - close_price) * self.position_size
-            
-            # Calculate total profit/loss including partial closes
-            total_profit_loss = final_profit_loss
-            for trade in self.trade_history:
-                if trade['action'].startswith('partial close'):
-                    total_profit_loss += trade['profit_loss']
-            
-            # Determine if it's a win or loss based on total profit/loss
-            trade_result = "win" if total_profit_loss > 0 else "loss"
-            
-            self.log_trade("close", close_price, self.position_size, total_profit_loss, trade_result)
-            self.position = None
-            self.position_size = 0
-            self.balance += total_profit_loss  # Update balance
-        else:
-            self.logger.warning("Attempted to close position, but no position is open")
-    
-    # Partial close position
-    def partial_close(self, percentage, reason):
-        if self.position is None:
-            self.logger.warning(f"Cannot partially close: no position open")
-            return
-
-        close_price = self.ohlc['c'][-1]
-        close_size = self.position_size * (percentage / 100)
-        remaining_size = self.position_size - close_size
-
-        # Calculate profit/loss for this partial close
-        if self.position == "long":
-            profit_loss = (close_price - self.entry_price) * close_size
-        else:  # short position
-            profit_loss = (self.entry_price - close_price) * close_size
-
-        self.logger.info(f"{reason} - Partially closing {percentage}% of position")
-        self.log_trade(f"partial close ({reason})", close_price, close_size, profit_loss)
-
-        # Update position size and balance
-        self.position_size = remaining_size
-        self.balance += profit_loss
-
-        if remaining_size == 0:
-            self.position = None
-            self.logger.info("Position fully closed")
-        else:
-            self.logger.info(f"Remaining position size: {remaining_size}")
-        
-        self.execute_trade("partial close", close_size)
-
-        # Adjust entry price after partial close
-        self.adjust_entry_price()
-
     # Update performance metrics
     def update_performance_metrics(self):
         try:
@@ -375,8 +396,8 @@ class Strategy(ABC):
         self.simulation = False
         self.active = True
     
-    # Put simulation
-    def put_simulation(self):
+    # Put live simulation
+    def put_live_simulation(self):
         self.simulation = True
         self.active = True
     
