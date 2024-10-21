@@ -19,17 +19,18 @@ def main():
     # for i, entry in enumerate(data, start=1):
     #     print(f"{i}: {entry}")
 
-    data = get_rsi("AAPL", "day", 4, limit=60)
-    for i, entry in enumerate(data, start=1):
-        print(f"{i}: {entry}")
+    # data = get_rsi("X:BTCUSD", "day", 1, limit=60)
+    # for i, entry in enumerate(data, start=1):
+    #     print(f"{i}: {entry}")
 
     # get_macd("AAPL", "day", 10)
     # get_macd("AAPL", "hour", 10)
     # get_macd("AAPL", "minute", 10)
 
-    # get_sma("AAPL", "day", 10)
-    # get_sma("AAPL", "hour", 10)
-    # get_sma("AAPL", "minute", 10)
+    data = get_sma("X:BTCUSD", "day", 1, limit=60)
+
+    for i, entry in enumerate(data, start=1):
+        print(f"{i}: {entry}")
 
     # get_ema("AAPL", "day", 10)
     # get_ema("AAPL", "hour", 10)
