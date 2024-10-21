@@ -1,124 +1,77 @@
 #!/usr/bin/env python3
 import plotly.graph_objects as go
-import pandas as pd
-from datetime import datetime, timedelta
-from polygon_api import get_ohlc, get_macd, get_rsi, get_ema, get_sma
 from plotly.subplots import make_subplots
+import pandas as pd
 
-def get_ohlc_data(ticker, multiplier, timespan, from_date, to_date):
-    # Get data
-    df = get_ohlc(ticker, multiplier, timespan, from_date, to_date)
+color_palette = ["red", "blue", "green", "brown", "purple", "orange", "cyan", "pink", "gray", "black"]
 
-    # Convert t column to datetime
-    for entry in df:
-        entry['t'] = datetime.fromtimestamp(entry['t'] / 1000).strftime('%Y-%m-%d %H:%M:%S')
+def get_next_color(color_palette, color_index):
+    color = color_palette[color_index]
+    color_index = (color_index + 1) % len(color_palette)
+    color_index = color_index + 1
+    return color
 
-    # Convert to pandas dataframe
-    df = pd.DataFrame(df)
+def draw_graph(df, limit=60):   
+    color_index = 0
+    rsi_title_text = ""
+    ma_title_text = ""
 
-    print(df)
+    # Limit the dataframe to the last 'limit' rows
+    df = df.tail(limit)
 
-    return df
-
-def get_rsi_data(ticker, timespan, limit):
-    # Convert to pandas dataframe
-    df = pd.DataFrame(get_rsi(ticker, timespan, limit))
-
-    return df
-
-def get_macd_data(ticker, timespan, limit):
-    # Convert to pandas dataframe
-    df = pd.DataFrame(get_macd(ticker, timespan, limit))
-
-    return df
-
-def get_ema_data(ticker, timespan, limit):
-    # Convert to pandas dataframe
-    df = pd.DataFrame(get_ema(ticker, timespan, limit))
-
-    return df
-
-def get_sma_data(ticker, timespan, limit):
-    # Convert to pandas dataframe
-    df = pd.DataFrame(get_sma(ticker, timespan, limit))
-
-    return df
-
-def draw_graph(ticker, multiplier, timespan, limit=30):
-   
-    # Calculate from_date and to_date based on limit
-    now = datetime.now()
-    one_day_ago = now - timedelta(days=1)
-    end_date = int(one_day_ago.timestamp() * 1000)
-
-    if timespan == "minute":
-        start_date = int((one_day_ago - timedelta(minutes=limit*multiplier)).timestamp() * 1000)
-    elif timespan == "hour":
-        start_date = int((one_day_ago - timedelta(hours=limit*multiplier)).timestamp() * 1000)
-    elif timespan == "day":
-        start_date = int((one_day_ago - timedelta(days=limit*multiplier)).timestamp() * 1000)
-    else:
-        print("Invalid timespan")
-        return False
-    
-    # Get OHLC data
-    ohlc_df = get_ohlc_data(ticker, multiplier, timespan, start_date, end_date)
-
-    # Get MACD data
-    macd_df = get_macd_data(ticker, timespan, limit)
-
-    # Get RSI data for 44 spans (30 + 14 for SMA calculation)
-    rsi_df = get_rsi_data(ticker, timespan, limit+14)
-    
-    # Calculate 14-day SMA of RSI
-    rsi_df['RSI_SMA'] = rsi_df['value'].rolling(window=14).mean()
-    
-    # Trim the RSI dataframe to show only the last 30 spans
-    rsi_df = rsi_df.tail(limit)
-    
-    # Create subplot with 4 rows
-    fig = make_subplots(rows=4, cols=1, shared_xaxes=True, 
-                        vertical_spacing=0.02, row_heights=[0.4, 0.2, 0.2, 0.2])
+    # Create subplot with 3 rows
+    fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
+                        vertical_spacing=0.02, row_heights=[0.6, 0.2, 0.2])
 
     # Add candlestick trace to first row
-    fig.add_trace(go.Candlestick(x=ohlc_df['t'],
-                open=ohlc_df['o'],
-                high=ohlc_df['h'],
-                low=ohlc_df['l'],
-                close=ohlc_df['c']), row=1, col=1)
-    
-    # Add RSI trace to second row
-    fig.add_trace(go.Scatter(x=rsi_df['timestamp'], y=rsi_df['value'], 
-                                name='RSI', line=dict(color='blue')), row=2, col=1)
+    fig.add_trace(go.Candlestick(
+        x=df.index,
+        open=df["open"],
+        high=df["high"],
+        low=df["low"],
+        close=df["close"],
+        hovertext=[f"Date: {date}<br>"
+                   f"Percent Return: {percent_return:.2%}<br>"
+                   f"Open: {open:.2f}<br>"
+                   f"High: {high:.2f}<br>"
+                   f"Low: {low:.2f}<br>"
+                   f"Close: {close:.2f}"
+                   for date, percent_return, open, high, low, close in zip(df.index, df["percent_return"], df["open"], df["high"], df["low"], df["close"])],
+        hoverinfo="text"
+    ), row=1, col=1)
 
-    # Add RSI SMA trace to the same subplot as RSI
-    fig.add_trace(go.Scatter(x=rsi_df['timestamp'], y=rsi_df['RSI_SMA'], 
-                             name='RSI 14-day SMA', line=dict(color='orange')), row=2, col=1)
-    
+    # Add indicators to bottom rows
+    for indicator in df.columns:
+        if "RSI" in indicator:
+            color = get_next_color(color_palette, color_index)
+            color_index = (color_index + 1) % len(color_palette)
+            fig.add_trace(go.Scatter(x=df.index, y=df[indicator], 
+                                     name=indicator, line=dict(color=color)), row=2, col=1)
+            if rsi_title_text:
+                rsi_title_text += f" | {indicator}"
+            else:
+                rsi_title_text = indicator
+            fig.update_yaxes(title_text=rsi_title_text, row=2, col=1)
+        elif "EMA" in indicator or "SMA" in indicator:
+            color = get_next_color(color_palette, color_index)
+            color_index = (color_index + 1) % len(color_palette)
+            fig.add_trace(go.Scatter(x=df.index, y=df[indicator], 
+                                     name=indicator, line=dict(color=color)), row=3, col=1)
+            if ma_title_text:
+                ma_title_text += f" | {indicator}"
+            else:
+                ma_title_text = indicator
+            fig.update_yaxes(title_text=ma_title_text, row=3, col=1)
 
-    # Add MACD trace to third row
-    fig.add_trace(go.Scatter(x=macd_df['timestamp'], y=macd_df['value'], 
-                             name='MACD', line=dict(color='green')), row=3, col=1)
-
-    # Add MACD signal trace to the same subplot as MACD
-    fig.add_trace(go.Scatter(x=macd_df['timestamp'], y=macd_df['signal'], 
-                             name='MACD Signal', line=dict(color='red')), row=3, col=1)
-    
-    # Add EMA trace to fourth row
-    ema_df = get_ema_data(ticker, timespan, limit)
-    fig.add_trace(go.Scatter(x=ema_df['timestamp'], y=ema_df['value'], 
-                             name='EMA', line=dict(color='purple')), row=4, col=1)
-    
-    # # Add SMA trace to fifth row
-    sma_df = get_sma_data(ticker, timespan, limit)
-    fig.add_trace(go.Scatter(x=sma_df['timestamp'], y=sma_df['value'], 
-                             name='SMA', line=dict(color='red')), row=4, col=1)
-
+    # Draw entry and exit points on the ohlc graph
+    fig.add_trace(go.Scatter(x=df.index, y=df["entry"], name="Entry", mode="markers", marker=dict(color="green", size=20, symbol="triangle-up")), row=1, col=1)
+    fig.add_trace(go.Scatter(x=df.index, y=df["exit"], name="Exit", mode="markers", marker=dict(color="red", size=20, symbol="triangle-down")), row=1, col=1)
+            
     # Update layout
     fig.update_layout(
         xaxis_rangeslider_visible=False,
         height=1000, 
-        title=f'{ticker} OHLC, RSI, MACD, and Moving Averages',
+        title=f'{df["symbol"].iloc[0]} GRAPH',
         template="plotly_white",  # Use a white template for a cleaner look
         showlegend=True,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
@@ -129,12 +82,6 @@ def draw_graph(ticker, multiplier, timespan, limit=30):
 
     # Update all y-axes
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
-
-    # Update specific y-axes titles
-    fig.update_yaxes(title_text='Price', row=1, col=1)
-    fig.update_yaxes(title_text='RSI', row=2, col=1)
-    fig.update_yaxes(title_text='MACD', row=3, col=1)
-    fig.update_yaxes(title_text='MA', row=4, col=1)
 
     fig.show()
     return True

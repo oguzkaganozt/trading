@@ -1,2 +1,1 @@
-- examine all ohlc and indicator gets on all possible timeframes and multipliers
-- 
+The adjust_entry_price method is called after partial closes, but it doesn't take into account the possibility of multiple partial closes. It might need to be more sophisticated for complex trading scenarios.

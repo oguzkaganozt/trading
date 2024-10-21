@@ -1,6 +1,9 @@
 # STRATEGY MODULE
 # Lack of slippage and fees consideration:
 # The strategy doesn't account for slippage or trading fees, which could significantly impact real-world performance.
+# Partial closes are not handled correctly
+# The adjust_entry_price method is called after partial closes, but it doesn't take into account the possibility of multiple partial closes. 
+# It might need to be more sophisticated for complex trading scenarios.
 
 # BACKTESTING MODULE
 # Backtesting of strategies
