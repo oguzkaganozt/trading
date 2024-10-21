@@ -19,7 +19,14 @@ def get_api_key():
 
 REST_API_KEY = get_api_key()
 
-def polygon_request(url, params, max_pages=10):
+def polygon_request(symbol, interval, multiplier, start_date, end_date, max_pages=10):
+    url = f"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/{multiplier}/{interval}/{int(start_date.timestamp() * 1000)}/{int(end_date.timestamp() * 1000)}"
+    params = {
+        "adjusted": "true",
+        "apiKey": REST_API_KEY,
+        "sort": "desc"
+    }
+
     try:
         response = requests.get(url, params=params)
         print(f"Initial request URL: {response.request.url}")
@@ -61,78 +68,74 @@ def polygon_request(url, params, max_pages=10):
         print(f"Request failed: {e}")
         return None
 
-def get_symbol_details(symbol):
-    url = f"https://api.polygon.io/v3/reference/tickers/{symbol}"
-    params = {
-        "apiKey": REST_API_KEY
-    }
-    data = polygon_request(url, params)
-    if data:
-        return data
-    else:
-        return None
+def kraken_request(symbol, interval = "1h"):
+    # 1m = 1, 5m = 5, 15m = 15, 30m = 30, 1h = 60, 4h = 240, 1d = 1440, 1w = 10080, 15d = 21600
+    multiplier = 60
 
-def get_symbols():
-    url = "https://api.polygon.io/v3/reference/tickers"
-    params = {
-        "apiKey": REST_API_KEY,
-        "limit": 1000,
-        "market": "crypto",
-        "sort": "ticker"
+    if interval == "1m":
+        multiplier = 1
+    elif interval == "5m":
+        multiplier = 5
+    elif interval == "15m":
+        multiplier = 15
+    elif interval == "30m":
+        multiplier = 30
+    elif interval == "1h":
+        multiplier = 60
+    elif interval == "4h":
+        multiplier = 240
+    elif interval == "1d":
+        multiplier = 1440
+    elif interval == "1w":
+        multiplier = 10080
+    elif interval == "15d":
+        multiplier = 21600
+
+    url = "https://api.kraken.com/0/public/OHLC"
+
+    payload = {
+        "pair": symbol,
+        "interval": multiplier
     }
+    headers = {
+        'Accept': 'application/json'
+    }
+
+    response = requests.get(url, params=payload, headers=headers)
+    data = response.json()
+    data = next(iter(data['result'].values()))
+
+    return data
+
+def get_ohlc(symbol, interval, limit=120):
     
-    data = polygon_request(url, params)
-    if data:
-        return data
-    else:
-        return None
+    # Get the data from Kraken
+    data = kraken_request(symbol, interval)
+    df = pd.DataFrame(data, columns=['timestamp', 'open', 'high', 'low', 'close', 'vwap', 'volume', 'count'])
+    df[['open', 'high', 'low', 'close', 'vwap', 'volume', 'count']] = df[['open', 'high', 'low', 'close', 'vwap', 'volume', 'count']].astype(float)
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s').dt.strftime('%Y-%m-%d %H:%M:%S')
+    df.set_index('timestamp', inplace=True)
+    data = df
 
-def get_ohlc(symbol, timespan, multiplier, limit=120, days_back=1095):
-    # Calculate date range
-    #  end_date = datetime.datetime.now(datetime.timezone.utc) # open once we got premium
-    end_date = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=2)
-    start_date = end_date - datetime.timedelta(days=days_back)
-
-    url = f"https://api.polygon.io/v2/aggs/ticker/{symbol}/range/{multiplier}/{timespan}/{int(start_date.timestamp() * 1000)}/{int(end_date.timestamp() * 1000)}"
-    params = {
-        "adjusted": "true",
-        "apiKey": REST_API_KEY,
-        "sort": "desc"
-    }
-    
-    data = polygon_request(url, params)
-    if not data:
+    # If no data is returned, return None
+    if data.size == 0:
         return None
     
     # Tail the data to get the last limit entries
     if len(data) > limit:
-        data = data[:limit]
-    
-    # Reverse the data to chronological order (oldest first)
-    data = list(reversed(data))
-    
-    # Remap the data to have the date as a datetime object
-    df = pd.DataFrame(data)
-    df['date'] = pd.to_datetime(df['t'], unit='ms').dt.strftime('%Y-%m-%d %H:%M:%S')
-    
-    # Rename and reorder columns
-    column_mapping = {'o': 'open', 'c': 'close', 'h': 'high', 'l': 'low', 'v': 'volume'}
-    df = df.rename(columns=column_mapping)[['date'] + list(column_mapping.values())]
-    
-    # Set 'date' as index
-    df.set_index('date', inplace=True)
+        data = data[-limit:]
 
     # Add percent return to the dataframe
-    df['percent_return'] = df['close'] / df['open'] - 1
+    data['percent_return'] = data['close'] / data['open'] - 1
 
     # Add symbol to the dataframe
-    df['symbol'] = symbol
+    data['symbol'] = symbol
 
     # Put dummy entry and exit points
-    df["entry"] = None
-    df["exit"] = None
-    
-    return df
+    data["entry"] = None
+    data["exit"] = None
+    data["position_size"] = None
+    return data
 
 def get_news(symbol, published_before=None, limit=10):
     ticker = symbol.replace("X:", "")

@@ -2,7 +2,10 @@
 from dbv import DBV
 import pandas as pd
 import pandas_ta as ta
-strategies = [DBV("X:BTCUSD", "hour", 4, 1000)]
+from polygon_api import kraken_request, get_ohlc
+# coin_list = ["XBTUSD", "ETHUSD", "SOLUSD", "ENJUSD", "DOTUSD", "AVAXUSD", "ADAUSD", "LINKUSD", "BCHUSD", "LTCUSD", "XRPUSD"]
+coin_list = ["XBTUSD"]
+strategies = [DBV(coin, "1d", 1000) for coin in coin_list]
 
 # Traverse all all active strategies and update them
 def run_strategies():
@@ -11,9 +14,9 @@ def run_strategies():
 
 def main():
     print("Hello World")
-    # help(ta.sma)
-    # run_strategies()
-    strategies[0].backtest(100)
+    
+    for strategy in strategies:
+        strategy.backtest(100)
     
     # Wait for user input to exit
     input("Press Enter to exit...")

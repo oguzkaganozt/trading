@@ -64,8 +64,8 @@ def draw_graph(df, limit=60):
             fig.update_yaxes(title_text=ma_title_text, row=3, col=1)
 
     # Draw entry and exit points on the ohlc graph
-    fig.add_trace(go.Scatter(x=df.index, y=df["entry"], name="Entry", mode="markers", marker=dict(color="green", size=20, symbol="triangle-up")), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df.index, y=df["exit"], name="Exit", mode="markers", marker=dict(color="red", size=20, symbol="triangle-down")), row=1, col=1)
+    fig.add_trace(go.Scatter(x=df.index, y=df["entry"], name="Entry", mode="markers", marker=dict(color="green", size=20, symbol="triangle-up"), hovertext=df["entry"].astype(str) + " - Entry" + df["position_size"].astype(str)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=df.index, y=df["exit"], name="Exit", mode="markers", marker=dict(color="red", size=20, symbol="triangle-down"), hovertext=df["exit"].astype(str) + " - Exit" + df["position_size"].astype(str)), row=1, col=1)
             
     # Update layout
     fig.update_layout(

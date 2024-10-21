@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import logging
-from polygon_api import get_ohlc, get_symbol_details
+from polygon_api import get_ohlc
 import datetime
 from time import sleep
 import pandas as pd
@@ -9,11 +9,10 @@ from graph import draw_graph
 
 # A base class for all strategies
 class Strategy(ABC):
-    def __init__(self, symbol, timespan, multiplier, balance, risk_percentage=1, stop_loss_percentage=8, take_profit_percentage=10):
+    def __init__(self, symbol, interval, balance, risk_percentage=1, stop_loss_percentage=8, take_profit_percentage=10):
         self.name = self.__class__.__name__
         self.symbol = symbol
-        self.timespan = timespan
-        self.multiplier = multiplier
+        self.interval = interval # minute, hour, 4-hour, day, week, 15-days
         self.active = True
         self.simulation = True
         self.position = None
@@ -30,12 +29,12 @@ class Strategy(ABC):
         self.performance_metrics = {}
         
         # Check if symbol is valid
-        try:
-            if get_symbol_details(self.symbol) is None:
-                raise ValueError(f"Symbol {self.symbol} not found")
-        except Exception as e:
-            print(f"Error initializing strategy: {str(e)}")
-            exit()
+        # try:
+        #     if get_symbol_details(self.symbol) is None:
+        #         raise ValueError(f"Symbol {self.symbol} not found")
+        # except Exception as e:
+        #     print(f"Error initializing strategy: {str(e)}")
+        #     exit()
 
         # Set up logger
         self.logger = logging.getLogger(f"{self.name}_{self.symbol}")
@@ -75,8 +74,7 @@ class Strategy(ABC):
         self.logger.addHandler(ch)
 
         self.logger.info(f"Initialized {self.name} strategy for {self.symbol}")
-        self.logger.info(f"  - Timespan: {self.timespan}")
-        self.logger.info(f"  - Multiplier: {self.multiplier}")
+        self.logger.info(f"  - interval: {self.interval}")
         self.logger.info(f"  - Balance: ${self.balance}")
         self.logger.info(f"  - Stop Loss Percentage: {self.stop_loss_percentage}%")
         self.logger.info(f"  - Risk Percentage: {self.risk_percentage}%")
@@ -126,10 +124,9 @@ class Strategy(ABC):
         thread.start()
     
     # Get data
-    def get_data(self, limit=120, days_back=1095):
+    def get_data(self, limit=240):
         try:
-            new_data = get_ohlc(self.symbol, self.timespan, self.multiplier, limit, days_back)
-            print(new_data)
+            new_data = get_ohlc(self.symbol, interval=self.interval, limit=limit)
             if self.data.empty:
                 self.data = new_data
             else:
@@ -218,7 +215,8 @@ class Strategy(ABC):
                 
                 # Put exit point in data
                 self.data.loc[self.data.index[-1], "exit"] = current_price
-            
+                self.data.loc[self.data.index[-1], "position_size"] = self.position_size
+
             elif action in ["long", "short"]:
                 self.position = action
                 self.entry_price = current_price
@@ -226,6 +224,7 @@ class Strategy(ABC):
                 
                 # Put entry point in data
                 self.data.loc[self.data.index[-1], "entry"] = current_price
+                self.data.loc[self.data.index[-1], "position_size"] = size
             
             self.trade_history.append(trade_info)
             self.update_performance_metrics()
@@ -401,6 +400,7 @@ class Strategy(ABC):
         self.position_size = 0
         self.simulation = True
         self.backtest = True
+        offset = 50
         
         self.logger.info(f"Starting backtest for {duration} periods")
         
@@ -417,12 +417,12 @@ class Strategy(ABC):
                 break
 
         # Get data for the duration of the backtest
-        self.get_data(limit=duration)
+        self.get_data(limit=duration+offset)
         original_data = self.data.copy()
         
-        for i in range(len(original_data)):
+        for i in range(len(original_data) - offset):
             # Use data up to the current index
-            self.data = original_data[:i+1].copy()
+            self.data = original_data[:i+1+offset].copy()
 
             self.logger.info(f"Backtesting period {i+1} of {len(original_data)}")
             
@@ -447,9 +447,6 @@ class Strategy(ABC):
                 self.logger.error(f"Error during backtest execution: {str(e)}")
                 break
 
-        # Restore the original data after the backtest
-        # self.data = original_data
-
         # Restore console handler
         if console_handler:
             self.logger.addHandler(console_handler)
@@ -468,12 +465,16 @@ class Strategy(ABC):
 
     # Calculate sleep duration
     def calculate_sleep_duration(self):
-        timespan_in_seconds = {
-            'minute': 60,
-            'hour': 3600,
-            'day': 86400,
-            'week': 604800,
-            'month': 2592000
+        interval_in_seconds = {
+            '1m': 1,
+            '5m': 5,
+            '15m': 15,
+            '30m': 30,
+            '1h': 60,
+            '4h': 240,
+            '1d': 1440,
+            '1w': 10080,
+            '15d': 21600
         }
-        return timespan_in_seconds.get(self.timespan, 60) * self.multiplier
+        return interval_in_seconds.get(self.interval, 60)
 
