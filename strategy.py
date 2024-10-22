@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import logging
-from polygon_api import get_ohlc
+from rest_api import get_ohlc
 import datetime
 from time import sleep
 import pandas as pd

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import pandas as pd
 import pandas_ta as ta
-from polygon_api import get_ohlc
+from rest_api import get_ohlc
 from graph import draw_graph
 
 data = get_ohlc("X:BTCUSD", "day", 1)
