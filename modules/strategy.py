@@ -8,11 +8,10 @@ import pandas_ta as ta
 from modules.graph import draw_graph
 from logging.handlers import RotatingFileHandler
 import numpy as np
-import sys
 
 # A base class for all strategies
 class Strategy(ABC):
-    def __init__(self, symbol, interval, balance, risk_percentage=1, stop_loss_percentage=8):
+    def __init__(self, symbol, interval, balance, risk_percentage=1, stop_loss_percentage=0):
         self.name = self.__class__.__name__
         self.symbol = symbol
         self.interval = interval # minute, hour, 4-hour, day, week, 15-days
@@ -210,7 +209,7 @@ class Strategy(ABC):
     # Execute trade
     def execute_trade(self, action, size):
         try:
-            current_price = self.data['close'][-1]
+            current_price = self.data['close'].iloc[-1]
             
             # Apply slippage if simulation is active
             if self.simulation:
@@ -232,11 +231,16 @@ class Strategy(ABC):
             self.logger.info(f"Executing {action} trade for {size:.4f} units of {self.symbol} at ${execution_price:.2f} (Total: ${total_amount:.2f})")
             
             trade_info = {
+                'symbol': self.symbol,
+                'interval': self.interval,
+                'index': self.data.index[-1],
                 'action': action,
                 'price': execution_price,
                 'size': size,
+                'amount': total_amount,
                 'date': datetime.datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')
             }
+
             if action == "close" or action.startswith("partial close"):
                 if self.position == "long":
                     profit_loss = (execution_price - self.entry_price) * size
@@ -256,27 +260,24 @@ class Strategy(ABC):
                 # Update balance
                 self.balance += profit_loss
                 
+                last_index = self.data.index[-1]
                 if action == "close":
+                    self.data.at[last_index, "exit_data"] = trade_info
                     self.position = None
                     self.position_size = 0
-                    self.data.loc[self.data.index[-1], "exit"] = execution_price # Put exit point in data for full close
                 else:
+                    self.data.at[last_index, "partial_close_data"] = trade_info
                     self.position_size -= size
-                    self.data.loc[self.data.index[-1], "partial_close"] = execution_price # Put partial close point in data
-                    
-                # Update position size in data
-                self.data.loc[self.data.index[-1], "position_size"] = self.position_size
-                self.data.loc[self.data.index[-1], "percentage_gain_loss"] = percentage_gain_loss
 
             elif action in ["long", "short"]:
                 self.position = action
                 self.entry_price = execution_price
                 self.position_size = size
                 
-                # Put entry point in data
-                self.data.loc[self.data.index[-1], "entry"] = execution_price
-                self.data.loc[self.data.index[-1], "position_size"] = size
-            
+                # Put entry data in DataFrame
+                last_index = self.data.index[-1]
+                self.data.at[last_index, "entry_data"] = trade_info
+
             self.trade_history.append(trade_info)
             self.update_performance_metrics()
         
@@ -290,36 +291,39 @@ class Strategy(ABC):
             raise ValueError("OHLC data not available. Cannot calculate position size.")
 
         current_price = self.data['close'][-1]
-        stop_loss_amount = current_price * (self.stop_loss_percentage / 100)
-        
         risk_amount = self.balance * (self.risk_percentage / 100)
         self.logger.info(f"Risk amount: ${risk_amount:.2f}")
-        self.logger.info(f"Stop loss amount: ${stop_loss_amount:.2f}")
 
-        if stop_loss_amount == 0:
-            self.logger.warning("Stop loss amount is zero. Cannot calculate position size.")
-            self.position_size = 0
-        else:
+        # Modified position size calculation
+        if self.stop_loss_percentage > 0:
+            stop_loss_amount = current_price * (self.stop_loss_percentage / 100)
+            self.logger.info(f"Stop loss amount: ${stop_loss_amount:.2f}")
             self.position_size = risk_amount / stop_loss_amount
-        self.entry_price = current_price
-
-        self.logger.info(f"Position size: {self.position_size:.4f}")
-
-        if self.position == "long":
-            self.stop_loss_price = current_price - stop_loss_amount
-        elif self.position == "short":
-            self.stop_loss_price = current_price + stop_loss_amount
+            
+            # Set stop loss price based on position type
+            if self.position == "long":
+                self.stop_loss_price = current_price - stop_loss_amount
+            elif self.position == "short":
+                self.stop_loss_price = current_price + stop_loss_amount
         else:
-            raise ValueError("Position type not set. Cannot calculate stop loss price.")
+            # When no stop loss is set, use a more conservative approach
+            self.position_size = risk_amount / current_price
+            self.stop_loss_price = 0  # Explicitly set to 0 when no stop loss
 
+        self.entry_price = current_price
+        self.logger.info(f"Position size: {self.position_size:.4f}")
+        
         self.logger.info(f"Position Details:")
         self.logger.info(f"  - Size: {self.position_size:.4f} units")
         self.logger.info(f"  - Entry Price: ${self.entry_price:.2f}")
-        self.logger.info(f"  - Stop Loss: ${self.stop_loss_price:.2f}")
+        if self.stop_loss_price:
+            self.logger.info(f"  - Stop Loss: ${self.stop_loss_price:.2f}")
+        else:
+            self.logger.info("  - No Stop Loss set")
 
     # Check trailing stop loss
     def check_trailing_stop_loss(self, trail_percentage=1):
-        if self.position is None:
+        if self.position is None or self.stop_loss_price == 0:
             return
 
         current_price = self.data['close'][-1]
@@ -480,24 +484,18 @@ class Strategy(ABC):
         self.simulation = False
         self.active = False
 
-    def print_progress_bar(self, current, total, prefix='', suffix='', decimals=1, length=30, fill='=', print_end="\r"):
+    def print_progress_bar(self, current, total):
         """
-        Call in a loop to create terminal progress bar
+        Print a simple progress bar to the console.
         @params:
             current   - Required  : current iteration (Int)
             total     - Required  : total iterations (Int)
-            prefix    - Optional  : prefix string (Str)
-            suffix    - Optional  : suffix string (Str)
-            decimals  - Optional  : positive number of decimals in percent complete (Int)
-            length    - Optional  : character length of bar (Int)
-            fill      - Optional  : bar fill character (Str)
-            print_end - Optional  : end character (e.g. "\r", "\r\n") (Str)
         """
-        percent = ("{0:." + str(decimals) + "f}").format(100 * (current / float(total)))
-        filled_length = int(length * current // total)
-        bar = fill * filled_length + '-' * (length - filled_length)
-        print(f'\r{prefix} [{bar}] {percent}% {suffix}', end=print_end)
-        # Print New Line on Complete
+        percent = f"{100 * (current / float(total)):.1f}"
+        filled_length = int(30 * current // total)
+        bar = '=' * filled_length + '-' * (30 - filled_length)
+        print(f'\rProgress: [{bar}] {percent}%', end='')
+        
         if current == total: 
             print()
 
@@ -538,7 +536,7 @@ class Strategy(ABC):
             self.data = original_data[:i+1+offset].copy()
 
             # Update progress bar
-            self.print_progress_bar(i + 1, total_periods, prefix='Backtesting:', suffix='Complete', length=30)
+            self.print_progress_bar(i + 1, total_periods)
 
             try:
                 if self.position is None:
@@ -554,17 +552,17 @@ class Strategy(ABC):
                     self.check_partial_close()
                     
                 # Preserve entry and exit points
-                if 'entry' in self.data.columns:
-                    original_data.loc[self.data.index[-1], 'entry'] = self.data['entry'].iloc[-1]
-                if 'exit' in self.data.columns:
-                    original_data.loc[self.data.index[-1], 'exit'] = self.data['exit'].iloc[-1]
-                
+                last_index = self.data.index[-1]
+                if pd.notna(self.data.at[last_index, 'entry_data']):
+                    original_data.at[last_index, 'entry_data'] = self.data.at[last_index, 'entry_data']
+                if pd.notna(self.data.at[last_index, 'exit_data']):
+                    original_data.at[last_index, 'exit_data'] = self.data.at[last_index, 'exit_data']
+                if pd.notna(self.data.at[last_index, 'partial_close_data']):
+                    original_data.at[last_index, 'partial_close_data'] = self.data.at[last_index, 'partial_close_data']
+
             except Exception as e:
                 self.logger.error(f"Error during backtest execution: {str(e)}")
                 break
-
-        # Print a newline after the progress bar is complete
-        print()
 
         # Restore console handler
         if console_handler:
@@ -573,11 +571,12 @@ class Strategy(ABC):
         self.logger.info("Backtest completed")
         self.log_backtest_results()
         self.logger.info("Graphing results")
+        self.logger.info(f"Data shape before graphing: {self.data.shape}")
         draw_graph(self.data, limit=duration)
         self.logger.info("Results graphed")
 
     def log_backtest_results(self):
-        self.logger.info("Backtest Results:")
+        self.logger.info(f"Backtest Results for Strategy: {self.name} {self.symbol} - {self.interval}")
         self.logger.info(f"Total Trades: {self.performance_metrics.get('total_trades', 0)}")
         self.logger.info(f"Win Rate: {self.performance_metrics.get('win_rate', 0):.2%}")
         self.logger.info(f"Profit Factor: {self.performance_metrics.get('profit_factor', 0):.2f}")

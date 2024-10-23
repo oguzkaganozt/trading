@@ -2,8 +2,8 @@
 from strategies.dbv import DBV
 
 # coin_list = ["XBTUSD", "ETHUSD", "SOLUSD", "ENJUSD", "DOTUSD", "AVAXUSD", "ADAUSD", "LINKUSD", "BCHUSD", "LTCUSD", "XRPUSD"]
-coin_list = ["XBTUSD"]
-strategies = [DBV(symbol=coin, interval="1d", balance=1000) for coin in coin_list]
+coin_list = ["BTCUSD"]
+strategies = [DBV(symbol=coin, interval="1d", balance=1000, risk_percentage=100, stop_loss_percentage=10) for coin in coin_list]
 
 # Traverse all all active strategies and update them
 def run_strategies():

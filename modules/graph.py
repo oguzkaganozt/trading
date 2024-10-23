@@ -11,7 +11,14 @@ def get_next_color(color_palette, color_index):
     color_index = color_index + 1
     return color
 
-def draw_graph(df, limit=60):   
+def draw_graph(df, limit=60):
+    if df is None or df.empty:
+        print("Error: Empty dataframe provided to draw_graph")
+        return False
+        
+    print(f"Drawing graph with dataframe of shape: {df.shape}")
+    print(f"Available columns: {df.columns.tolist()}")
+    
     color_index = 0
     rsi_title_text = ""
     ma_title_text = ""
@@ -64,33 +71,36 @@ def draw_graph(df, limit=60):
             fig.update_yaxes(title_text=ma_title_text, row=3, col=1)
 
     # Draw entry points
+    entry_data = df['entry_data'].dropna()
     fig.add_trace(go.Scatter(
-        x=df.index, 
-        y=df["entry"], 
-        name="Entry", 
-        mode="markers", 
-        marker=dict(color="green", size=20, symbol="triangle-up"), 
-        hovertext="balalayka",
+        x=entry_data.index,
+        y=entry_data.apply(lambda x: x['price']),
+        name="Entry",
+        mode="markers",
+        marker=dict(color="green", size=20, symbol="triangle-up"),
+        hovertext=entry_data.apply(lambda x: f"Entry<br>Price: ${x['price']:.2f}<br>Size: {x['size']:.4f}<br>Amount: ${x['amount']:.2f}")
     ), row=1, col=1)
 
     # Draw exit points
+    exit_data = df['exit_data'].dropna()
     fig.add_trace(go.Scatter(
-        x=df.index, 
-        y=df["exit"], 
-        name="Exit", 
-        mode="markers", 
-        marker=dict(color="red", size=20, symbol="triangle-down"), 
-        hovertext="balalayka",
+        x=exit_data.index,
+        y=exit_data.apply(lambda x: x['price']),
+        name="Exit",
+        mode="markers",
+        marker=dict(color="red", size=20, symbol="triangle-down"),
+        hovertext=exit_data.apply(lambda x: f"Exit<br>Price: ${x['price']:.2f}<br>Gain/Loss: {x['percentage_gain_loss']:.2f}%")
     ), row=1, col=1)
 
     # Draw partial close points
+    partial_close_data = df['partial_close_data'].dropna()
     fig.add_trace(go.Scatter(
-        x=df.index, 
-        y=df["partial_close"], 
-        name="Partial Close", 
-        mode="markers", 
-        marker=dict(color="yellow", size=20, symbol="circle"), 
-        hovertext="balalayka",
+        x=partial_close_data.index,
+        y=partial_close_data.apply(lambda x: x['price']),
+        name="Partial Close",
+        mode="markers",
+        marker=dict(color="yellow", size=20, symbol="circle"),
+        hovertext=partial_close_data.apply(lambda x: f"Partial Close<br>Price: ${x['price']:.2f}<br>Gain/Loss: {x['percentage_gain_loss']:.2f}%")
     ), row=1, col=1)
 
     # Update layout
@@ -112,5 +122,24 @@ def draw_graph(df, limit=60):
     # Update all y-axes
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
 
-    fig.show()
+    # Try different display methods
+    try:
+        # Method 1: Default show
+        fig.show()
+    except Exception as e1:
+        print(f"Method 1 failed: {e1}")
+        try:
+            # Method 2: Using browser
+            import plotly.io as pio
+            pio.renderers.default = "browser"
+            fig.show()
+        except Exception as e2:
+            print(f"Method 2 failed: {e2}")
+            try:
+                # Method 3: Save to HTML file
+                fig.write_html("trading_graph.html")
+                print("Graph saved to trading_graph.html")
+            except Exception as e3:
+                print(f"Method 3 failed: {e3}")
+                
     return True
