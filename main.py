@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from dbv import DBV
+from strategies.dbv import DBV
 
 # coin_list = ["XBTUSD", "ETHUSD", "SOLUSD", "ENJUSD", "DOTUSD", "AVAXUSD", "ADAUSD", "LINKUSD", "BCHUSD", "LTCUSD", "XRPUSD"]
 coin_list = ["XBTUSD"]
@@ -10,9 +10,7 @@ def run_strategies():
     for strategy in strategies:
         strategy.run()
 
-def main():
-    print("Hello World")
-    
+def main():    
     for strategy in strategies:
         strategy.backtest(100)
     

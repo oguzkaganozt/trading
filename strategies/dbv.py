@@ -1,4 +1,4 @@
-from strategy import Strategy
+from modules.strategy import Strategy
 
 class DBV(Strategy):
     def check_entry(self):
@@ -41,4 +41,7 @@ class DBV(Strategy):
         if rsi_prev >= rsi_sma_prev and rsi_current < rsi_sma_current:
             self.logger.info("RSI crossed below SMA. Exiting Long")
             return True
+        return False
+    
+    def check_partial_close(self):
         return False

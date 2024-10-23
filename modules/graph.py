@@ -63,15 +63,44 @@ def draw_graph(df, limit=60):
                 ma_title_text = indicator
             fig.update_yaxes(title_text=ma_title_text, row=3, col=1)
 
-    # Draw entry and exit points on the ohlc graph
-    fig.add_trace(go.Scatter(x=df.index, y=df["entry"], name="Entry", mode="markers", marker=dict(color="green", size=20, symbol="triangle-up"), hovertext=df["entry"].astype(str) + " - Entry" + df["position_size"].astype(str)), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df.index, y=df["exit"], name="Exit", mode="markers", marker=dict(color="red", size=20, symbol="triangle-down"), hovertext=df["exit"].astype(str) + " - Exit" + df["position_size"].astype(str)), row=1, col=1)
-            
+    # Draw entry points
+    fig.add_trace(go.Scatter(
+        x=df.index, 
+        y=df["entry"], 
+        name="Entry", 
+        mode="markers", 
+        marker=dict(color="green", size=20, symbol="triangle-up"), 
+        hovertext="balalayka",
+    ), row=1, col=1)
+
+    # Draw exit points
+    fig.add_trace(go.Scatter(
+        x=df.index, 
+        y=df["exit"], 
+        name="Exit", 
+        mode="markers", 
+        marker=dict(color="red", size=20, symbol="triangle-down"), 
+        hovertext="balalayka",
+    ), row=1, col=1)
+
+    # Draw partial close points
+    fig.add_trace(go.Scatter(
+        x=df.index, 
+        y=df["partial_close"], 
+        name="Partial Close", 
+        mode="markers", 
+        marker=dict(color="yellow", size=20, symbol="circle"), 
+        hovertext="balalayka",
+    ), row=1, col=1)
+
     # Update layout
     fig.update_layout(
         xaxis_rangeslider_visible=False,
         height=1000, 
-        title=f'{df["symbol"].iloc[0]} GRAPH',
+        title=dict(
+            text=f'<b>{df["symbol"].iloc[0]} - {df["interval"].iloc[0].upper()}</b>',
+            font=dict(size=24)
+        ),
         template="plotly_white",  # Use a white template for a cleaner look
         showlegend=True,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
