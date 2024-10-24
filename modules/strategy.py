@@ -4,10 +4,8 @@ from modules.rest_api import get_ohlc
 import datetime
 from time import sleep
 import pandas as pd
-import pandas_ta as ta
 from modules.graph import draw_graph
 from logging.handlers import RotatingFileHandler
-import numpy as np
 
 # A base class for all strategies
 class Strategy(ABC):
@@ -114,9 +112,10 @@ class Strategy(ABC):
                         self.short()
                 else:
                     if self.check_exit():
-                        self.close_position()
+                        self.close_position("exit")
                     self.check_trailing_stop_loss()
-                    self.check_partial_close()
+                    if percentage := self.check_partial_close():
+                        self.partial_close(percentage=percentage)
             except Exception as e:
                 self.logger.error(f"Error during strategy execution: {str(e)}")
                 self.active = False
@@ -158,14 +157,14 @@ class Strategy(ABC):
         self.execute_trade("short", self.position_size)
 
     # Close position
-    def close_position(self):
+    def close_position(self, reason="exit"):
         if self.position is not None:
-            self.execute_trade("close", self.position_size)
+            self.execute_trade("close", self.position_size, reason=reason)
         else:
             self.logger.warning("Attempted to close position, but no position is open")
     
     # Partial close position
-    def partial_close(self, percentage, reason):
+    def partial_close(self, percentage):
         if self.position is None:
             self.logger.warning(f"Cannot partially close: no position open")
             return
@@ -175,13 +174,13 @@ class Strategy(ABC):
             return
 
         close_size = self.position_size * (percentage / 100)
-        self.logger.info(f"{reason} - Partially closing {percentage}% of position")
+        self.logger.info(f"Partially closing {percentage}% of position")
         
         # Execute the trade first
-        self.execute_trade(f"partial close ({reason})", close_size)
+        self.execute_trade(f"partial close", close_size)
 
         # Now perform calculations based on the updated state
-        current_price = self.data['close'][-1]
+        current_price = self.data['close'].iloc[-1]
         if self.position == "long":
             profit_loss = (current_price - self.entry_price) * close_size
         else:  # short position
@@ -207,7 +206,7 @@ class Strategy(ABC):
         self.logger.info(f"Adjusted entry price to: ${self.entry_price:.2f}")
 
     # Execute trade
-    def execute_trade(self, action, size):
+    def execute_trade(self, action, size, reason=None):
         try:
             current_price = self.data['close'].iloc[-1]
             
@@ -238,7 +237,8 @@ class Strategy(ABC):
                 'price': execution_price,
                 'size': size,
                 'amount': total_amount,
-                'date': datetime.datetime.now().strftime('%Y-%m-%d %I:%M:%S %p')
+                'date': datetime.datetime.now().strftime('%Y-%m-%d %I:%M:%S %p'),
+                'reason': reason
             }
 
             if action == "close" or action.startswith("partial close"):
@@ -290,43 +290,26 @@ class Strategy(ABC):
         if self.data.empty:
             raise ValueError("OHLC data not available. Cannot calculate position size.")
 
-        current_price = self.data['close'][-1]
+        current_price = self.data['close'].iloc[-1]
         risk_amount = self.balance * (self.risk_percentage / 100)
         self.logger.info(f"Risk amount: ${risk_amount:.2f}")
-
-        # Modified position size calculation
-        if self.stop_loss_percentage > 0:
-            stop_loss_amount = current_price * (self.stop_loss_percentage / 100)
-            self.logger.info(f"Stop loss amount: ${stop_loss_amount:.2f}")
-            self.position_size = risk_amount / stop_loss_amount
-            
-            # Set stop loss price based on position type
-            if self.position == "long":
-                self.stop_loss_price = current_price - stop_loss_amount
-            elif self.position == "short":
-                self.stop_loss_price = current_price + stop_loss_amount
-        else:
-            # When no stop loss is set, use a more conservative approach
-            self.position_size = risk_amount / current_price
-            self.stop_loss_price = 0  # Explicitly set to 0 when no stop loss
-
+        
+        # Calculate position size based on risk amount
+        self.position_size = risk_amount / current_price
+        
         self.entry_price = current_price
         self.logger.info(f"Position size: {self.position_size:.4f}")
         
         self.logger.info(f"Position Details:")
         self.logger.info(f"  - Size: {self.position_size:.4f} units")
         self.logger.info(f"  - Entry Price: ${self.entry_price:.2f}")
-        if self.stop_loss_price:
-            self.logger.info(f"  - Stop Loss: ${self.stop_loss_price:.2f}")
-        else:
-            self.logger.info("  - No Stop Loss set")
 
     # Check trailing stop loss
     def check_trailing_stop_loss(self, trail_percentage=1):
         if self.position is None or self.stop_loss_price == 0:
             return
 
-        current_price = self.data['close'][-1]
+        current_price = self.data['close'].iloc[-1]
         trail_amount = self.entry_price * (trail_percentage / 100)
 
         if self.position == "long":
@@ -337,7 +320,7 @@ class Strategy(ABC):
             
             if current_price <= self.stop_loss_price:
                 self.logger.info(f"Trailing stop loss triggered at ${current_price:.2f}")
-                self.close_position()
+                self.close_position(reason="trailing stop loss")
 
         elif self.position == "short":
             trail_stop = current_price + trail_amount
@@ -347,81 +330,7 @@ class Strategy(ABC):
             
             if current_price >= self.stop_loss_price:
                 self.logger.info(f"Trailing stop loss triggered at ${current_price:.2f}")
-                self.close_position()
-    
-    # Calculate support and resistance levels
-    def calculate_support_resistance(self, window=20, deviation_threshold=0.01, smoothing_periods=5, volume_factor=1.5):
-        """
-        Calculate support and resistance levels using local minima and maxima with additional filtering.
-        
-        :param window: The number of periods to consider for local extrema
-        :param deviation_threshold: The minimum price deviation to consider as a new level
-        :param smoothing_periods: Number of periods for moving average smoothing
-        :param volume_factor: Factor to consider a volume spike
-        :return: A dictionary containing lists of support and resistance levels
-        """
-        self.logger.info("Calculating support and resistance levels")
-        
-        # Apply smoothing to reduce noise
-        highs = self.data['high'].rolling(window=smoothing_periods).mean()
-        lows = self.data['low'].rolling(window=smoothing_periods).mean()
-        volumes = self.data['volume']
-        
-        resistance_levels = []
-        support_levels = []
-        
-        # Calculate average volume
-        avg_volume = volumes.mean()
-        
-        for i in range(window, len(self.data) - window):
-            # Check for resistance
-            if all(highs[i] > highs[i-window:i]) and all(highs[i] > highs[i+1:i+window+1]):
-                # Check if this is a significant new level
-                if not resistance_levels or abs(highs[i] - resistance_levels[-1]) / resistance_levels[-1] > deviation_threshold:
-                    # Check for volume confirmation
-                    if volumes[i] > avg_volume * volume_factor:
-                        resistance_levels.append(highs[i])
-            
-            # Check for support
-            if all(lows[i] < lows[i-window:i]) and all(lows[i] < lows[i+1:i+window+1]):
-                # Check if this is a significant new level
-                if not support_levels or abs(lows[i] - support_levels[-1]) / support_levels[-1] > deviation_threshold:
-                    # Check for volume confirmation
-                    if volumes[i] > avg_volume * volume_factor:
-                        support_levels.append(lows[i])
-        
-        # Cluster nearby levels
-        resistance_levels = self.cluster_levels(resistance_levels)
-        support_levels = self.cluster_levels(support_levels)
-        
-        self.logger.info(f"Found {len(resistance_levels)} resistance levels and {len(support_levels)} support levels")
-        
-        return {
-            'resistance': resistance_levels,
-            'support': support_levels
-        }
-
-    def cluster_levels(self, levels, cluster_threshold=0.01):
-        """
-        Cluster nearby levels to reduce redundancy.
-        
-        :param levels: List of price levels
-        :param cluster_threshold: Maximum deviation to consider levels as part of the same cluster
-        :return: List of clustered levels
-        """
-        if not levels:
-            return []
-        
-        levels.sort()
-        clustered = [levels[0]]
-        
-        for level in levels[1:]:
-            if (level - clustered[-1]) / clustered[-1] > cluster_threshold:
-                clustered.append(level)
-            else:
-                clustered[-1] = (clustered[-1] + level) / 2  # Average of the cluster
-        
-        return clustered
+                self.close_position(reason="trailing stop loss")
 
     # Update performance metrics
     def update_performance_metrics(self):
@@ -469,36 +378,6 @@ class Strategy(ABC):
             else:
                 self.logger.warning(f"Attribute {key} not found in strategy")
     
-    # Put live
-    def put_live(self):
-        self.simulation = False
-        self.active = True
-    
-    # Put live simulation
-    def put_live_simulation(self):
-        self.simulation = True
-        self.active = True
-    
-    # Put inactive
-    def put_inactive(self):
-        self.simulation = False
-        self.active = False
-
-    def print_progress_bar(self, current, total):
-        """
-        Print a simple progress bar to the console.
-        @params:
-            current   - Required  : current iteration (Int)
-            total     - Required  : total iterations (Int)
-        """
-        percent = f"{100 * (current / float(total)):.1f}"
-        filled_length = int(30 * current // total)
-        bar = '=' * filled_length + '-' * (30 - filled_length)
-        print(f'\rProgress: [{bar}] {percent}%', end='')
-        
-        if current == total: 
-            print()
-
     # Backtest
     def backtest(self, duration):
         self.position = None
@@ -547,9 +426,10 @@ class Strategy(ABC):
                         self.short()
                 else:
                     if self.check_exit():
-                        self.close_position()
+                        self.close_position("exit")
                     self.check_trailing_stop_loss()
-                    self.check_partial_close()
+                    if percentage := self.check_partial_close():
+                        self.partial_close(percentage=percentage)
                     
                 # Preserve entry and exit points
                 last_index = self.data.index[-1]
@@ -569,19 +449,20 @@ class Strategy(ABC):
             self.logger.addHandler(console_handler)
 
         self.logger.info("Backtest completed")
-        self.log_backtest_results()
         self.logger.info("Graphing results")
-        self.logger.info(f"Data shape before graphing: {self.data.shape}")
-        draw_graph(self.data, limit=duration)
+        draw_graph(self.data, limit=duration, summary=self.log_backtest_results())
         self.logger.info("Results graphed")
 
     def log_backtest_results(self):
-        self.logger.info(f"Backtest Results for Strategy: {self.name} {self.symbol} - {self.interval}")
-        self.logger.info(f"Total Trades: {self.performance_metrics.get('total_trades', 0)}")
-        self.logger.info(f"Win Rate: {self.performance_metrics.get('win_rate', 0):.2%}")
-        self.logger.info(f"Profit Factor: {self.performance_metrics.get('profit_factor', 0):.2f}")
-        self.logger.info(f"Total Profit/Loss: ${self.performance_metrics.get('total_profit_loss', 0):.2f}")
-        self.logger.info(f"Final Balance: ${self.balance:.2f}")
+        results = f"""Backtest Results for Strategy: {self.name} {self.symbol} - {self.interval}
+Total Trades: {self.performance_metrics.get('total_trades', 0)}
+Win Rate: {self.performance_metrics.get('win_rate', 0):.2%}
+Profit Factor: {self.performance_metrics.get('profit_factor', 0):.2f}
+Total Profit/Loss: ${self.performance_metrics.get('total_profit_loss', 0):.2f}
+Final Balance: ${self.balance:.2f}"""
+
+        self.logger.info(results)
+        return results
 
     # Calculate sleep duration
     def calculate_sleep_duration(self):
@@ -598,3 +479,33 @@ class Strategy(ABC):
         }
         return interval_in_seconds.get(self.interval, 60)
     
+    # Put live
+    def put_live(self):
+        self.simulation = False
+        self.active = True
+    
+    # Put live simulation
+    def put_live_simulation(self):
+        self.simulation = True
+        self.active = True
+    
+    # Put inactive
+    def put_inactive(self):
+        self.simulation = False
+        self.active = False
+
+    def print_progress_bar(self, current, total):
+        """
+        Print a simple progress bar to the console.
+        @params:
+            current   - Required  : current iteration (Int)
+            total     - Required  : total iterations (Int)
+        """
+        percent = f"{100 * (current / float(total)):.1f}"
+        filled_length = int(30 * current // total)
+        bar = '=' * filled_length + '-' * (30 - filled_length)
+        print(f'\rProgress: [{bar}] {percent}%', end='')
+        
+        if current == total: 
+            print()
+

@@ -47,6 +47,53 @@ def kraken_request(symbol, interval = "1h"):
 
     return data
 
+# Calculate support and resistance levels
+def calculate_support_resistance(data, window=15, deviation_threshold=0.005, smoothing_periods=5, volume_factor=1.2):
+    """
+    Calculate support and resistance levels using local minima and maxima with additional filtering.
+    
+    :param window: The number of periods to consider for local extrema
+    :param deviation_threshold: The minimum price deviation to consider as a new level
+    :param smoothing_periods: Number of periods for moving average smoothing
+    :param volume_factor: Factor to consider a volume spike
+    :return: The updated DataFrame with support and resistance columns
+    """
+    # Apply smoothing to reduce noise
+    highs = data['high'].rolling(window=smoothing_periods).mean()
+    lows = data['low'].rolling(window=smoothing_periods).mean()
+    volumes = data['volume']
+    
+    resistance_levels = []
+    support_levels = []
+    
+    # Calculate average volume
+    avg_volume = volumes.mean()
+    
+    # Initialize support and resistance columns
+    data['resistance'] = None
+    data['support'] = None
+    
+    for i in range(window, len(data) - window):
+        # Check for resistance
+        if highs.iloc[i] > highs.iloc[i-window:i].max() and highs.iloc[i] > highs.iloc[i+1:i+window+1].max():
+            # Check if this is a significant new level
+            if not resistance_levels or abs(highs.iloc[i] - resistance_levels[-1]) / resistance_levels[-1] > deviation_threshold:
+                # Check for volume confirmation
+                if volumes.iloc[i] > avg_volume * volume_factor:
+                    resistance_levels.append(highs.iloc[i])
+                    data.at[data.index[i], 'resistance'] = highs.iloc[i]
+        
+        # Check for support
+        if lows.iloc[i] < lows.iloc[i-window:i].min() and lows.iloc[i] < lows.iloc[i+1:i+window+1].min():
+            # Check if this is a significant new level
+            if not support_levels or abs(lows.iloc[i] - support_levels[-1]) / support_levels[-1] > deviation_threshold:
+                # Check for volume confirmation
+                if volumes.iloc[i] > avg_volume * volume_factor:
+                    support_levels.append(lows.iloc[i])
+                    data.at[data.index[i], 'support'] = lows.iloc[i]
+    
+    return data
+ 
 def get_ohlc(symbol, interval, limit=180):
     # Get the data from Kraken
     data = kraken_request(symbol, interval)
@@ -69,6 +116,9 @@ def get_ohlc(symbol, interval, limit=180):
     # Tail the data to get the last limit entries
     if len(df) > limit:
         df = df.iloc[-limit:]
+
+    # Calculate support and resistance
+    calculate_support_resistance(df)
 
     # Add additional columns
     df['symbol'] = symbol

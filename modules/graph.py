@@ -11,13 +11,10 @@ def get_next_color(color_palette, color_index):
     color_index = color_index + 1
     return color
 
-def draw_graph(df, limit=60):
+def draw_graph(df, limit=60, summary=None):
     if df is None or df.empty:
         print("Error: Empty dataframe provided to draw_graph")
         return False
-        
-    print(f"Drawing graph with dataframe of shape: {df.shape}")
-    print(f"Available columns: {df.columns.tolist()}")
     
     color_index = 0
     rsi_title_text = ""
@@ -69,6 +66,23 @@ def draw_graph(df, limit=60):
             else:
                 ma_title_text = indicator
             fig.update_yaxes(title_text=ma_title_text, row=3, col=1)
+    
+    # Draw support and resistance lines as horizontal lines
+    if 'support' in df.columns:
+        for support_level in df['support'].dropna().unique():
+            fig.add_shape(type='line',
+                          x0=df.index.min(), x1=df.index.max(),
+                          y0=support_level, y1=support_level,
+                          line=dict(color='green', width=2, dash='dot'),
+                          name='Support')
+
+    if 'resistance' in df.columns:
+        for resistance_level in df['resistance'].dropna().unique():
+            fig.add_shape(type='line',
+                          x0=df.index.min(), x1=df.index.max(),
+                          y0=resistance_level, y1=resistance_level,
+                          line=dict(color='red', width=2, dash='dot'),
+                          name='Resistance')
 
     # Draw entry points
     entry_data = df['entry_data'].dropna()
@@ -89,7 +103,7 @@ def draw_graph(df, limit=60):
         name="Exit",
         mode="markers",
         marker=dict(color="red", size=20, symbol="triangle-down"),
-        hovertext=exit_data.apply(lambda x: f"Exit<br>Price: ${x['price']:.2f}<br>Gain/Loss: {x['percentage_gain_loss']:.2f}%")
+        hovertext=exit_data.apply(lambda x: f"Exit<br>Price: ${x['price']:.2f}<br>Gain/Loss: {x['percentage_gain_loss']:.2f}%<br>Reason: {x['reason']}")
     ), row=1, col=1)
 
     # Draw partial close points
@@ -111,9 +125,11 @@ def draw_graph(df, limit=60):
             text=f'<b>{df["symbol"].iloc[0]} - {df["interval"].iloc[0].upper()}</b>',
             font=dict(size=24)
         ),
-        template="plotly_white",  # Use a white template for a cleaner look
+        template="plotly_white",
         showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        # Remove the extra margin since we're not using bottom annotation anymore
+        margin=dict(b=80)
     )
 
     # Update all x-axes

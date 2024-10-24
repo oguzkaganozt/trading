@@ -1,5 +1,6 @@
 from modules.strategy import Strategy
 import pandas as pd
+import pandas_ta as ta
 
 class DBV(Strategy):
     def check_entry(self):
