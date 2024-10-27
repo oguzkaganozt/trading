@@ -9,15 +9,17 @@ from logging.handlers import RotatingFileHandler
 
 # A base class for all strategies
 class Strategy(ABC):
-    def __init__(self, symbol, interval, balance, risk_percentage=1, stop_loss_percentage=0):
+    def __init__(self, symbol, interval, parent_interval, balance, risk_percentage=1, stop_loss_percentage=0):
         self.name = self.__class__.__name__
         self.symbol = symbol
         self.interval = interval # minute, hour, 4-hour, day, week, 15-days
+        self.parent_interval = parent_interval # minute, hour, 4-hour, day, week, 15-days
         self.active = True
         self.simulation = True
         self.position = None
         self.balance = balance
         self.data = pd.DataFrame()
+        self.data_parent = pd.DataFrame()
         self.stop_loss_percentage = stop_loss_percentage
         self.risk_percentage = risk_percentage
         self.entry_price = 0
@@ -83,6 +85,7 @@ class Strategy(ABC):
     # Check entry
     @abstractmethod
     def check_entry(self):
+        self.logger.debug("Checking entry")
         pass
 
     # Check exit
@@ -131,13 +134,20 @@ class Strategy(ABC):
     def get_data(self, limit=180):
         try:
             new_data = get_ohlc(self.symbol, interval=self.interval, limit=limit)
+            new_data_parent = get_ohlc(self.symbol, interval=self.parent_interval, limit=limit)
             if self.data.empty:
                 self.data = new_data
+                self.data_parent = new_data_parent
             else:
                 # Append only new data points
                 last_timestamp = self.data.index[-1]
                 new_data = new_data[new_data.index > last_timestamp]
                 self.data = pd.concat([self.data, new_data])
+
+                # Append only new data points parent
+                last_timestamp_parent = self.data_parent.index[-1]
+                new_data_parent = new_data_parent[new_data_parent.index > last_timestamp_parent]
+                self.data_parent = pd.concat([self.data_parent, new_data_parent])
         except Exception as e:
             self.logger.error(f"Error getting data: {str(e)}")
             raise
@@ -345,6 +355,8 @@ class Strategy(ABC):
                 
                 winning_trades = [trade for trade in closed_trades if trade['result'] == 'win']
                 losing_trades = [trade for trade in closed_trades if trade['result'] == 'loss']
+                self.performance_metrics['win_trades'] = len(winning_trades)
+                self.performance_metrics['loss_trades'] = len(losing_trades)
                 
                 self.performance_metrics['win_rate'] = len(winning_trades) / len(closed_trades) if closed_trades else 0
                 
@@ -360,12 +372,13 @@ class Strategy(ABC):
                     self.performance_metrics['profit_factor'] = total_profit / total_loss
                 
                 self.performance_metrics['total_profit_loss'] = total_profit - total_loss
+                self.performance_metrics['total_profit_loss_percentage'] = (self.performance_metrics['total_profit_loss'] / self.balance) * 100
                 
                 self.logger.info("Updated Performance Metrics:")
                 self.logger.info(f"  - Total Trades: {self.performance_metrics['total_trades']}")
                 self.logger.info(f"  - Win Rate: {self.performance_metrics['win_rate']:.2%}")
                 self.logger.info(f"  - Profit Factor: {self.performance_metrics['profit_factor']:.2f}")
-                self.logger.info(f"  - Total Profit/Loss: ${self.performance_metrics['total_profit_loss']:.2f}")
+                self.logger.info(f"  - Total Profit/Loss: ${self.performance_metrics['total_profit_loss']:.2f} ({self.performance_metrics['total_profit_loss_percentage']:.2f}%)")
         except Exception as e:
             self.logger.error(f"Error updating performance metrics: {str(e)}")
 
@@ -389,7 +402,7 @@ class Strategy(ABC):
         self.position_size = 0
         self.simulation = True
         self.backtest = True
-        offset = 50
+        offset = 205
         
         # Clear all logs in file
         with open(f"logs/{self.name}_{self.symbol}.log", 'w') as file:
@@ -408,12 +421,13 @@ class Strategy(ABC):
         # Get data for the duration of the backtest
         self.get_data(limit=duration+offset)
         original_data = self.data.copy()
+        original_data_parent = self.data_parent.copy()
         
         total_periods = len(original_data) - offset
         for i in range(total_periods):
             # Use data up to the current index
             self.data = original_data[:i+1+offset].copy()
-
+            self.data_parent = original_data_parent[:i+1+offset].copy()
             # Update progress bar
             self.print_progress_bar(i + 1, total_periods)
 
@@ -452,17 +466,24 @@ class Strategy(ABC):
         self.logger.info("Graphing results")
         draw_graph(self.data, limit=duration, summary=self.log_backtest_results())
         self.logger.info("Results graphed")
-
+ 
     def log_backtest_results(self):
         results = f"""Backtest Results for Strategy: {self.name} {self.symbol} - {self.interval}
-Total Trades: {self.performance_metrics.get('total_trades', 0)}
-Win Rate: {self.performance_metrics.get('win_rate', 0):.2%}
-Profit Factor: {self.performance_metrics.get('profit_factor', 0):.2f}
-Total Profit/Loss: ${self.performance_metrics.get('total_profit_loss', 0):.2f}
-Final Balance: ${self.balance:.2f}"""
+                    Total Trades: {self.performance_metrics.get('total_trades', 0)}
+                    Win Rate: {self.performance_metrics.get('win_rate', 0):.2%}
+                    Profit Factor: {self.performance_metrics.get('profit_factor', 0):.2f}
+                    Total Profit/Loss: ${self.performance_metrics.get('total_profit_loss', 0):.2f}
+                    Final Balance: ${self.balance:.2f}"""
+        
+        summary = {}
+        summary['name'] = self.name
+        summary['win_trades'] = self.performance_metrics.get('win_trades', 0)
+        summary['loss_trades'] = self.performance_metrics.get('loss_trades', 0)
+        summary['profit_factor'] = self.performance_metrics.get('profit_factor', 0)
+        summary['total_profit_loss_percentage'] = self.performance_metrics.get('total_profit_loss_percentage', 0)
 
         self.logger.info(results)
-        return results
+        return summary
 
     # Calculate sleep duration
     def calculate_sleep_duration(self):
@@ -508,4 +529,5 @@ Final Balance: ${self.balance:.2f}"""
         
         if current == total: 
             print()
+
 

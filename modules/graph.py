@@ -18,7 +18,9 @@ def draw_graph(df, limit=60, summary=None):
     
     color_index = 0
     rsi_title_text = ""
+    mfi_title_text = ""
     ma_title_text = ""
+    macd_title_text = ""
 
     # Limit the dataframe to the last 'limit' rows
     df = df.tail(limit)
@@ -50,12 +52,22 @@ def draw_graph(df, limit=60, summary=None):
             color = get_next_color(color_palette, color_index)
             color_index = (color_index + 1) % len(color_palette)
             fig.add_trace(go.Scatter(x=df.index, y=df[indicator], 
-                                     name=indicator, line=dict(color=color)), row=2, col=1)
+                                     name=indicator, line=dict(color=color)), row=3, col=1)
             if rsi_title_text:
                 rsi_title_text += f" | {indicator}"
             else:
                 rsi_title_text = indicator
             fig.update_yaxes(title_text=rsi_title_text, row=2, col=1)
+        elif "MFI" in indicator:
+            color = get_next_color(color_palette, color_index)
+            color_index = (color_index + 1) % len(color_palette)
+            fig.add_trace(go.Scatter(x=df.index, y=df[indicator], 
+                                     name=indicator, line=dict(color=color)), row=2, col=1)
+            if mfi_title_text:
+                mfi_title_text += f" | {indicator}"
+            else:
+                mfi_title_text = indicator
+            fig.update_yaxes(title_text=mfi_title_text, row=2, col=1)
         elif "EMA" in indicator or "SMA" in indicator:
             color = get_next_color(color_palette, color_index)
             color_index = (color_index + 1) % len(color_palette)
@@ -66,6 +78,16 @@ def draw_graph(df, limit=60, summary=None):
             else:
                 ma_title_text = indicator
             fig.update_yaxes(title_text=ma_title_text, row=3, col=1)
+        elif "MACD" in indicator and "MACDh" not in indicator:
+            color = get_next_color(color_palette, color_index)
+            color_index = (color_index + 1) % len(color_palette)
+            fig.add_trace(go.Scatter(x=df.index, y=df[indicator], 
+                                     name=indicator, line=dict(color=color)), row=3, col=1)
+            if macd_title_text:
+                macd_title_text += f" | {indicator}"
+            else:
+                macd_title_text = indicator
+            fig.update_yaxes(title_text=macd_title_text, row=3, col=1)
     
     # Draw support and resistance lines as horizontal lines
     if 'support' in df.columns:
@@ -122,13 +144,12 @@ def draw_graph(df, limit=60, summary=None):
         xaxis_rangeslider_visible=False,
         height=1000, 
         title=dict(
-            text=f'<b>{df["symbol"].iloc[0]} - {df["interval"].iloc[0].upper()}</b>',
+            text=f'<b>{summary["name"]} {df["symbol"].iloc[0]} - {df["interval"].iloc[0].upper()} </b> - {summary["win_trades"]} Win / {summary["loss_trades"]} Loss Trades -  Profit Factor: {summary["profit_factor"]:.2f} - Total Gain/Loss: {summary["total_profit_loss_percentage"]:.2f}%',
             font=dict(size=24)
         ),
         template="plotly_white",
         showlegend=True,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        # Remove the extra margin since we're not using bottom annotation anymore
         margin=dict(b=80)
     )
 

@@ -105,8 +105,8 @@ def get_ohlc(symbol, interval, limit=180):
     numeric_columns = ['open', 'high', 'low', 'close', 'vwap', 'volume', 'count']
     df[numeric_columns] = df[numeric_columns].astype(float)
     
-    # Convert timestamp to datetime and set as index
-    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+    # Convert timestamp to datetime with UTC+3 timezone
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s').dt.tz_localize('UTC').dt.tz_convert('Etc/GMT-3')
     df.set_index('timestamp', inplace=True)
 
     # If no data is returned, return None

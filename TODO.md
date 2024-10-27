@@ -1,5 +1,5 @@
 MANDATORY
-- write overall summary of the backtest at the graph
+- günlükten 4 saatliklere geçiş
 - add stop loss and trailing stop loss different methods
 - dashboard for live trading or simulation
 
