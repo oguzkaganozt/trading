@@ -46,6 +46,13 @@ def show_dashboard():
         options=["1h", "4h", "1d", "1w", "15d"],
         value="1w"
     )
+
+    # Duration selection
+    duration = st.select_slider(
+        "Select Duration",
+        options=[100, 200, 300, 400, 500],
+        value=300
+    )
     
     # Trading parameters in columns
     col1, col2, col3 = st.columns(3)
@@ -100,7 +107,7 @@ def show_dashboard():
         
         # Run backtests in parallel
         with Pool() as pool:
-            results = pool.map(run_backtest, strategies)
+            results = pool.map(lambda s: s.backtest(duration), strategies)
             
         st.success("Backtesting completed!")
         st.write(results)
