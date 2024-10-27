@@ -1,5 +1,6 @@
 MANDATORY
 - günlükten 4 saatliklere geçiş
+- günlükten 4 saatliğe yada haftalıktan günlüğe geçişte indikatörlerin tarihlerinin eşitlenmesi
 - add stop loss and trailing stop loss different methods
 - dashboard for live trading or simulation
 

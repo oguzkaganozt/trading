@@ -464,9 +464,11 @@ class Strategy(ABC):
 
         self.logger.info("Backtest completed")
         self.logger.info("Graphing results")
-        draw_graph(self.data, limit=duration, summary=self.log_backtest_results())
+        summary = self.log_backtest_results()
+        draw_graph(self.data, limit=duration, summary=summary)
         self.logger.info("Results graphed")
- 
+        return summary
+    
     def log_backtest_results(self):
         results = f"""Backtest Results for Strategy: {self.name} {self.symbol} - {self.interval}
                     Total Trades: {self.performance_metrics.get('total_trades', 0)}
