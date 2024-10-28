@@ -3,3 +3,4 @@ pandas
 plotly
 streamlit
 pandas_ta
+setuptools
