@@ -29,14 +29,6 @@ class Strategy(ABC):
         self.performance_metrics = {}
         self.slippage_percentage = 0.1
         self.parent_interval_supported = False
-        
-        # Check if symbol is valid
-        # try:
-        #     if get_symbol_details(self.symbol) is None:
-        #         raise ValueError(f"Symbol {self.symbol} not found")
-        # except Exception as e:
-        #     print(f"Error initializing strategy: {str(e)}")
-        #     exit()
 
         # Set up logger
         self.logger = logging.getLogger(f"{self.name}_{self.symbol}")
@@ -412,7 +404,7 @@ class Strategy(ABC):
         self.position_size = 0
         self.simulation = True
         self.backtest = True
-        offset = 205
+        offset = 50
         
         # Clear all logs in file
         with open(f"logs/{self.name}_{self.symbol}.log", 'w') as file:
@@ -434,6 +426,11 @@ class Strategy(ABC):
         original_data_parent = self.data_parent.copy()
         
         total_periods = len(original_data) - offset
+
+        if total_periods < 1:
+            self.logger.error("Not enough data to perform backtest")
+            return
+
         for i in range(total_periods):
             # Use data up to the current index
             self.data = original_data[:i+1+offset].copy()

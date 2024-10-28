@@ -2,15 +2,17 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
+from multiprocessing import Pool
+import os
+
 from strategies.rsi_sma import RSI_SMA
 from strategies.mfi_sma import MFI_SMA
 from strategies.macd_mfi import MACD_MFI
 from strategies.mfi_sma_macd import MFI_SMA_MACD
 from strategies.mfi_sma_macd_10diff import MFI_SMA_MACD_10DIFF
-from multiprocessing import Pool
-import os
+
 strategy_map = {
-    "RSI-SMA:": RSI_SMA,
+    "RSI-SMA": RSI_SMA,
     "MFI-SMA": MFI_SMA,
     "MACD-MFI": MACD_MFI,
     "MFI-SMA-MACD": MFI_SMA_MACD,
