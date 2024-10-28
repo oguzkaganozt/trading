@@ -179,36 +179,9 @@ def show_backtesting_dashboard():
                 with tab:
                     with open("./"+result["graph_url"],'r') as f: 
                         html_data = f.read()
-                    
-                    # Get viewport width and height using custom JavaScript
-                    components.html(
-                        """
-                        <script>
-                            function sendViewportData() {
-                                const width = window.innerWidth;
-                                window.parent.postMessage({
-                                    type: 'set_viewport',
-                                    width: width
-                                }, '*');
-                            }
-                            // Send initial size
-                            sendViewportData();
-                            // Update on resize
-                            window.addEventListener('resize', sendViewportData);
-                        </script>
-                        """,
-                        height=0,
-                    )
-
-                    # Initialize viewport width in session state if not present
-                    if 'viewport_width' not in st.session_state:
-                        st.session_state.viewport_width = 1500  # Default fallback
-
-                    # Calculate responsive width (90% of viewport width)
-                    responsive_width = int(st.session_state.viewport_width * 0.85)
 
                     # Show in webpage
-                    st.components.v1.html(html_data, scrolling=True, width=responsive_width, height=1000)
+                    st.components.v1.html(html_data, scrolling=True, width=1400, height=1000)
         
         # Return configuration and results
         return results

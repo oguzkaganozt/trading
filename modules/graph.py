@@ -146,7 +146,7 @@ def draw_graph(df, limit=60, summary=None):
         height=1000, 
         title=dict(
             text=f'<b>{summary["name"]} {df["symbol"].iloc[0]} - {df["interval"].iloc[0].upper()} </b> - {summary["win_trades"]} Win / {summary["loss_trades"]} Loss Trades -  Profit Factor: {summary["profit_factor"]:.2f} - Total Gain/Loss: {summary["total_profit_loss_percentage"]:.2f}%',
-            font=dict(size=24)
+            font=dict(size=18)
         ),
         template="plotly_white",
         showlegend=True,
