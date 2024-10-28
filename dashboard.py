@@ -10,7 +10,7 @@ from strategies.mfi_sma_macd_10diff import MFI_SMA_MACD_10DIFF
 from multiprocessing import Pool
 import os
 strategy_map = {
-    "RSI-SMA": RSI_SMA,
+    "RSI-SMA:": RSI_SMA,
     "MFI-SMA": MFI_SMA,
     "MACD-MFI": MACD_MFI,
     "MFI-SMA-MACD": MFI_SMA_MACD,
