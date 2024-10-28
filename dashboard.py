@@ -7,14 +7,12 @@ import os
 
 from strategies.rsi_sma import RSI_SMA
 from strategies.mfi_sma import MFI_SMA
-from strategies.macd_mfi import MACD_MFI
 from strategies.mfi_sma_macd import MFI_SMA_MACD
 from strategies.mfi_sma_macd_10diff import MFI_SMA_MACD_10DIFF
 
 strategy_map = {
     "RSI-SMA": RSI_SMA,
     "MFI-SMA": MFI_SMA,
-    "MACD-MFI": MACD_MFI,
     "MFI-SMA-MACD": MFI_SMA_MACD,
     "MFI-SMA-MACD-10DIFF": MFI_SMA_MACD_10DIFF
 }
@@ -101,8 +99,108 @@ def show_live_trading_dashboard():
     pass
 
 def show_live_simulation_dashboard():
+        # Add custom CSS to left-align content
+    st.markdown("""
+        <style>
+        .block-container {
+            padding-left: 2rem;
+            padding-right: 2rem;
+            max-width: 85%;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
     st.title("Live Simulation")
-    pass
+    
+    # Strategy selection
+    strategies = list(strategy_map.keys())
+    strategy = st.selectbox(
+        "Select Trading Strategy",
+        strategies
+    )
+    
+    # Get strategy class immediately after selection
+    strategy_class = get_strategy_class(strategy)
+    if not strategy_class:
+        st.error(f"Strategy {strategy} not implemented")
+        return None
+    
+    # Coin selection (allowing multiple)
+    coins = st.multiselect(
+        "Select Trading Pairs",
+        coin_pairs,
+        default=["BTC/USDT"]
+    )
+    
+    # Timeframe selection
+    timeframe = st.select_slider(
+        "Select Timeframe",
+        options=["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w", "15d"],
+        value="1d"
+    )
+
+    # Parent interval selection
+    if strategy_class.is_parent_interval_supported():
+        parent_interval = st.select_slider(
+            "Select Parent Interval",
+            options=["1h", "4h", "1d", "1w", "15d"],
+            value="1w"
+        )
+    else:
+        parent_interval = None
+    
+    # Trading parameters in columns
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        balance = st.number_input(
+            "Enter Initial Balance (USDT)",
+            min_value=0.0,
+            value=1000.0,
+            step=100.0
+        )
+    
+    with col2:
+        risk_percentage = st.slider(
+            "Risk Percentage per Trade",
+            min_value=0.0,
+            max_value=100.0,
+            value=100.0,
+            step=5.0
+        )
+    
+    with col3:
+        stop_loss = st.slider(
+            "Stop Loss Percentage",
+            min_value=0.0,
+            max_value=10.0,
+            value=0.0,
+            step=0.5
+        )
+
+    # Start button
+    if st.button("Start Simulation"):
+        # Clear and recreate graphs folder
+        if os.path.exists("graphs"):
+            for file in os.listdir("graphs"):
+                os.remove(os.path.join("graphs", file))
+        os.makedirs("graphs", exist_ok=True)
+        
+        # Create strategy instances based on configuration
+        strategies = []
+        for coin in coins:
+            # Convert from "BTC/USDT" format to "BTCUSD" format
+            symbol = coin.split('/')[0] + "USD"
+            strategy_instance = strategy_class(
+                symbol=symbol,
+                interval=timeframe,
+                parent_interval=parent_interval,
+                balance=balance,
+                risk_percentage=risk_percentage,
+                stop_loss_percentage=stop_loss
+            )
+            strategies.append(strategy_instance)
+
 
 def show_backtesting_dashboard():
     # Add custom CSS to left-align content
@@ -183,8 +281,8 @@ def show_backtesting_dashboard():
         )
     
     with col3:
-        stop_loss = st.slider(
-            "Stop Loss Percentage",
+        trailing_stop_loss = st.slider(
+            "Trailing Stop Loss Percentage",
             min_value=0.0,
             max_value=10.0,
             value=0.0,
@@ -210,7 +308,7 @@ def show_backtesting_dashboard():
                 parent_interval=parent_interval,
                 balance=balance,
                 risk_percentage=risk_percentage,
-                stop_loss_percentage=stop_loss
+                trailing_stop_percentage=trailing_stop_loss
             )
             strategies.append(strategy_instance)
         

@@ -1,8 +1,8 @@
 MANDATORY
-- add stop loss and trailing stop loss different methods
 - günlükten 4 saatliğe yada haftalıktan günlüğe geçişte indikatörlerin tarihlerinin eşitlenmesi
 - implement live simulation dashboard and testing
 - implement live trading dashboard and trading
+- implement trailing stop loss
 
 OPTIONAL
 - add increase_position to increase position size in an existing position

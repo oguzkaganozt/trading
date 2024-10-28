@@ -9,7 +9,7 @@ from logging.handlers import RotatingFileHandler
 
 # A base class for all strategies
 class Strategy(ABC):
-    def __init__(self, symbol, interval, parent_interval, balance, risk_percentage=1, stop_loss_percentage=0):
+    def __init__(self, symbol, interval, parent_interval, balance, risk_percentage=10, trailing_stop_percentage=0):
         self.name = self.__class__.__name__
         self.symbol = symbol
         self.interval = interval # minute, hour, 4-hour, day, week, 15-days
@@ -20,10 +20,11 @@ class Strategy(ABC):
         self.balance = balance
         self.data = pd.DataFrame()
         self.data_parent = pd.DataFrame()
-        self.stop_loss_percentage = stop_loss_percentage
+        self.trailing_stop_percentage = trailing_stop_percentage
         self.risk_percentage = risk_percentage
         self.entry_price = 0
         self.stop_loss_price = 0
+        self.extreme_price_since_entry = 0
         self.position_size = 0
         self.trade_history = []
         self.performance_metrics = {}
@@ -71,7 +72,7 @@ class Strategy(ABC):
         self.logger.info(f"Initialized {self.name} strategy for {self.symbol}")
         self.logger.info(f"  - interval: {self.interval}")
         self.logger.info(f"  - Balance: ${self.balance}")
-        self.logger.info(f"  - Stop Loss Percentage: {self.stop_loss_percentage}%")
+        self.logger.info(f"  - Trailing Stop Percentage: {self.trailing_stop_percentage}%")
         self.logger.info(f"  - Risk Percentage: {self.risk_percentage}%")
         self.logger.info("--------------------------------")
 
@@ -317,32 +318,46 @@ class Strategy(ABC):
         self.logger.info(f"  - Entry Price: ${self.entry_price:.2f}")
 
     # Check trailing stop loss
-    def check_trailing_stop_loss(self, trail_percentage=1):
-        if self.position is None or self.stop_loss_price == 0:
+    def check_trailing_stop_loss(self):
+        if self.position is None or self.trailing_stop_percentage == 0:
             return
 
+        is_long = self.position == "long"
         current_price = self.data['close'].iloc[-1]
-        trail_amount = self.entry_price * (trail_percentage / 100)
+        
+        # Set initial stop loss
+        if self.stop_loss_price == 0:
+            multiplier = (1 - self.trailing_stop_percentage / 100) if is_long else (1 + self.trailing_stop_percentage / 100)
+            self.stop_loss_price = self.entry_price * multiplier
+            self.extreme_price_since_entry = self.entry_price
+            self.logger.info(f"Initial stop loss set at ${self.stop_loss_price:.2f}")
+            return
 
-        if self.position == "long":
-            trail_stop = current_price - trail_amount
-            if trail_stop > self.stop_loss_price:
-                self.stop_loss_price = trail_stop
-                self.logger.info(f"Updated trailing stop loss: ${self.stop_loss_price:.2f}")
-            
-            if current_price <= self.stop_loss_price:
-                self.logger.info(f"Trailing stop loss triggered at ${current_price:.2f}")
-                self.close_position(reason="trailing stop loss")
+        prev_candle = self.data.iloc[-2]
+        
+        # Update extreme price and calculate new stop
+        if is_long:
+            self.extreme_price_since_entry = max(self.extreme_price_since_entry, prev_candle['close'])
+            new_stop = self.extreme_price_since_entry * (1 - self.trailing_stop_percentage / 100)
+            should_update = new_stop > self.stop_loss_price
+            stop_triggered = current_price <= self.stop_loss_price
+        else:
+            self.extreme_price_since_entry = min(self.extreme_price_since_entry, prev_candle['close'])
+            new_stop = self.extreme_price_since_entry * (1 + self.trailing_stop_percentage / 100)
+            should_update = new_stop < self.stop_loss_price
+            stop_triggered = current_price >= self.stop_loss_price
 
-        elif self.position == "short":
-            trail_stop = current_price + trail_amount
-            if trail_stop < self.stop_loss_price or self.stop_loss_price == 0:
-                self.stop_loss_price = trail_stop
-                self.logger.info(f"Updated trailing stop loss: ${self.stop_loss_price:.2f}")
-            
-            if current_price >= self.stop_loss_price:
-                self.logger.info(f"Trailing stop loss triggered at ${current_price:.2f}")
-                self.close_position(reason="trailing stop loss")
+        # Update stop if needed
+        if should_update:
+            old_stop = self.stop_loss_price
+            self.stop_loss_price = new_stop
+            self.logger.info(f"Updated trailing stop: ${old_stop:.2f} -> ${new_stop:.2f} "
+                           f"(Extreme {'high' if is_long else 'low'}: ${self.extreme_price_since_entry:.2f})")
+
+        # Close position if stop is triggered
+        if stop_triggered:
+            self.logger.info(f"Trailing stop triggered at ${current_price:.2f} (Stop: ${self.stop_loss_price:.2f})")
+            self.close_position(reason="trailing stop loss")
 
     # Update performance metrics
     def update_performance_metrics(self):
@@ -540,5 +555,4 @@ class Strategy(ABC):
         
         if current == total: 
             print()
-
 

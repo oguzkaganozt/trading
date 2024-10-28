@@ -21,20 +21,7 @@ class MFI_SMA_MACD_10DIFF(Strategy):
 
         # Get current and previous values for MFI and MFI SMA
         mfi_current = float(mfi.iloc[-1])
-        mfi_prev = float(mfi.iloc[-2])
         mfi_sma_current = float(mfi_sma.iloc[-1])
-        mfi_sma_prev = float(mfi_sma.iloc[-2])
-        # macd_current = macd.iloc[-1]
-
-        self.logger.info(f"{self.data['MACD_12_26_9'].iloc[-1]}")
-        self.logger.info(f"{self.data['MACDs_12_26_9'].iloc[-1]}")
-
-        # Check if close price near to any resistance level +- 5%
-        # resistance_levels = self.data['resistance'].tolist()
-        # for resistance_level in resistance_levels:
-        #     if self.data['close'].iloc[-1] > resistance_level * 0.95 and self.data['close'].iloc[-1] < resistance_level * 1.05:
-        #         self.logger.info(f"Close price near to resistance level: {resistance_level}")
-        #         return False
 
         # Check if MFI crosses above its SMA
         if mfi_current > mfi_sma_current+10 and self.data['MACD_12_26_9'].iloc[-1] > self.data['MACDs_12_26_9'].iloc[-1]:
