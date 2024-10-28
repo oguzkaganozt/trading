@@ -200,6 +200,16 @@ def show_live_simulation_dashboard():
                 stop_loss_percentage=stop_loss
             )
             strategies.append(strategy_instance)
+        
+        # Run live simulation for each strategy
+        for strategy in strategies:
+            strategy.put_live_simulation()
+        
+        # Run live simulation in parallel
+        with st.status("Running live simulation...") as status:
+            with Pool() as pool:
+                pool.map(strategy.live_simulation, strategies)
+                status.update(label="Completed!", state="complete")
 
 
 def show_backtesting_dashboard():
