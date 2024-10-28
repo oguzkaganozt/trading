@@ -2,7 +2,7 @@ from modules.strategy import Strategy
 import pandas as pd
 import pandas_ta as ta
 
-class MFI_SMA(Strategy):
+class MFI_SMA_MACD(Strategy):
     parent_interval_supported = False
     
     def get_indicators(self):
