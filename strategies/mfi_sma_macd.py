@@ -11,7 +11,7 @@ class MFI_SMA_MACD(Strategy):
         
         mfi = self.data.ta.mfi(high=self.data['high'], low=self.data['low'], close=self.data['close'], volume=self.data['volume'], length=7, append=True)
         mfi_sma = self.data.ta.sma(close=self.data['MFI_7'], length=14, append=True, suffix='MFI')
-        macd = self.data_parent.ta.macd(close=self.data_parent['close'], append=True)
+        macd = self.data.ta.macd(close=self.data['close'], append=True)
         return mfi, mfi_sma, macd
 
     def check_entry(self):
@@ -24,11 +24,13 @@ class MFI_SMA_MACD(Strategy):
         mfi_prev = float(mfi.iloc[-2])
         mfi_sma_current = float(mfi_sma.iloc[-1])
         mfi_sma_prev = float(mfi_sma.iloc[-2])
-        macd_current = float(macd.iloc[-1])
+        # macd_current = macd.iloc[-1]
 
+        self.logger.info(f"{self.data['MACD_12_26_9'].iloc[-1]}")
+        self.logger.info(f"{self.data['MACDs_12_26_9'].iloc[-1]}")
 
         # Check if MFI crosses above its SMA
-        if mfi_prev <= mfi_sma_prev and mfi_current > mfi_sma_current and macd_current['MACD_12_26_9'].iloc[-1] > macd_current['MACDs_12_26_9'].iloc[-1]:
+        if mfi_prev <= mfi_sma_prev and mfi_current > mfi_sma_current and self.data['MACD_12_26_9'].iloc[-1] > self.data['MACDs_12_26_9'].iloc[-1]:
             self.logger.debug("MFI crossed above SMA. Entering Long")
             return "long"
         return False
