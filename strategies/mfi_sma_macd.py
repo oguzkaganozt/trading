@@ -30,7 +30,7 @@ class MFI_SMA_MACD(Strategy):
         self.logger.info(f"{self.data['MACDs_12_26_9'].iloc[-1]}")
 
         # Check if MFI crosses above its SMA
-        if mfi_prev <= mfi_sma_prev and mfi_current > mfi_sma_current and self.data['MACD_12_26_9'].iloc[-1] > self.data['MACDs_12_26_9'].iloc[-1]:
+        if mfi_prev <= mfi_sma_prev and mfi_current > mfi_sma_current+15 and self.data['MACD_12_26_9'].iloc[-1] > self.data['MACDs_12_26_9'].iloc[-1]:
             self.logger.debug("MFI crossed above SMA. Entering Long")
             return "long"
         return False
