@@ -21,3 +21,4 @@ venv/
 
 # Graphs
 graphs/
+graphs/*
