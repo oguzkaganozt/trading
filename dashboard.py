@@ -48,7 +48,7 @@ def show_backtesting_dashboard():
         .block-container {
             padding-left: 2rem;
             padding-right: 2rem;
-            max-width: 80%;
+            max-width: 85%;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -181,7 +181,7 @@ def show_backtesting_dashboard():
                         html_data = f.read()
                     
                     # Show in webpage
-                    st.components.v1.html(html_data, scrolling=True, width=1700, height=1200)
+                    st.components.v1.html(html_data, scrolling=True, width=1500, height=1200)
         
         # Return configuration and results
         return results
