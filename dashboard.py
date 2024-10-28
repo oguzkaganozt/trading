@@ -6,13 +6,15 @@ from strategies.rsi_sma import RSI_SMA
 from strategies.mfi_sma import MFI_SMA
 from strategies.macd_mfi import MACD_MFI
 from strategies.mfi_sma_macd import MFI_SMA_MACD
+from strategies.mfi_sma_macd_10diff import MFI_SMA_MACD_10DIFF
 from multiprocessing import Pool
 import os
 strategy_map = {
     "RSI-SMA": RSI_SMA,
     "MFI-SMA": MFI_SMA,
     "MACD-MFI": MACD_MFI,
-    "MFI-SMA-MACD": MFI_SMA_MACD
+    "MFI-SMA-MACD": MFI_SMA_MACD,
+    "MFI-SMA-MACD-10DIFF": MFI_SMA_MACD_10DIFF
 }
 
 coin_pairs = ["BTC/USDT", 
@@ -42,7 +44,6 @@ coin_pairs = ["BTC/USDT",
               "ETC/USDT", 
               "XLM/USDT", 
               "STX/USDT",
-              "POL/USDT",
               "WIF/USDT",
               "AAVE/USDT",
               "IMX/USDT",
