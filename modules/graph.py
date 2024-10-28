@@ -162,6 +162,8 @@ def draw_graph(df, limit=60, summary=None):
     # Try different display methods
     try:
         # Method 1: Default show
+        fig.write_html("graph.html")
+        summary["graph_url"] = "graph.html"
         fig.show()
     except Exception as e1:
         print(f"Method 1 failed: {e1}")
@@ -174,8 +176,8 @@ def draw_graph(df, limit=60, summary=None):
             print(f"Method 2 failed: {e2}")
             try:
                 # Method 3: Save to HTML file
-                fig.write_html("trading_graph.html")
-                print("Graph saved to trading_graph.html")
+                fig.write_html("graph.html")
+                print("Graph saved to graph.html")
             except Exception as e3:
                 print(f"Method 3 failed: {e3}")
                 

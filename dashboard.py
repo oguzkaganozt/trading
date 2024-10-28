@@ -145,6 +145,7 @@ def show_backtesting_dashboard():
                         if result is not None:  # Add null check
                             results.append(result)
                             st.write(f"Completed backtest for {strategies[i].symbol}")
+                            st.write(result["graph_url"])
                         else:
                             st.warning(f"No results for {strategies[i].symbol}")
                         status.update(label=f"Backtest {i + 1}/{len(strategies)}")
