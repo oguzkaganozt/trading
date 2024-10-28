@@ -4,4 +4,4 @@ plotly
 streamlit
 pandas_ta
 setuptools
-numpy
+numpy==1.26.4
