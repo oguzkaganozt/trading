@@ -332,6 +332,16 @@ def show_backtesting_dashboard():
                     status.update(label=f"Error: {str(e)}", state="error")
                     st.error(f"An error occurred during backtesting: {str(e)}")
         
+        # Write combined results
+        total_win_trades = sum(result["win_trades"] for result in results)
+        total_loss_trades = sum(result["loss_trades"] for result in results)
+        win_rate = total_win_trades * 100 / (total_win_trades + total_loss_trades)
+        average_profit_factor = sum(result["profit_factor"] for result in results) / len(results)
+        average_profit_loss_percentage = sum(result["total_profit_loss_percentage"] for result in results) / len(results)
+        st.write(f"Win Rate: {win_rate:.2f}%")
+        st.write(f"Average Profit Factor: {average_profit_factor:.2f}")
+        st.write(f"Average Percentage Gain: {average_profit_loss_percentage:.2f}%")
+
         # Create tabs for each result
         if results:            
             tabs = st.tabs([f"Result for {result['symbol']} {result['interval']}" for result in results])

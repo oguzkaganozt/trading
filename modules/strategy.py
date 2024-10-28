@@ -450,6 +450,7 @@ class Strategy(ABC):
             # Use data up to the current index
             self.data = original_data[:i+1+offset].copy()
             self.data_parent = original_data_parent[:i+1+offset].copy()
+            
             # Update progress bar
             self.print_progress_bar(i + 1, total_periods)
 

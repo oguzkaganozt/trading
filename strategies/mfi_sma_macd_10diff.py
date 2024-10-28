@@ -24,7 +24,7 @@ class MFI_SMA_MACD_10DIFF(Strategy):
         mfi_sma_current = float(mfi_sma.iloc[-1])
 
         # Check if MFI crosses above its SMA
-        if mfi_current > mfi_sma_current+10 and self.data['MACD_12_26_9'].iloc[-1] > self.data['MACDs_12_26_9'].iloc[-1]:
+        if mfi_current > mfi_sma_current+15 and self.data['MACD_12_26_9'].iloc[-1] > self.data['MACDs_12_26_9'].iloc[-1]:
             self.logger.debug("MFI crossed above SMA. Entering Long")
             return "long"
         return False
@@ -41,7 +41,7 @@ class MFI_SMA_MACD_10DIFF(Strategy):
         mfi_sma_prev = float(mfi_sma.iloc[-2])
 
         # Check if MFI crosses below its SMA
-        if mfi_prev >= mfi_sma_prev and mfi_current < mfi_sma_current:
+        if mfi_prev > mfi_current:
             self.logger.debug("MFI crossed below SMA. Exiting Long")
             return True
         return False
