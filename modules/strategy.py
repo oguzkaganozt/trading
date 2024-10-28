@@ -489,6 +489,8 @@ class Strategy(ABC):
         
         summary = {}
         summary['name'] = self.name
+        summary['symbol'] = self.symbol
+        summary['interval'] = self.interval
         summary['win_trades'] = self.performance_metrics.get('win_trades', 0)
         summary['loss_trades'] = self.performance_metrics.get('loss_trades', 0)
         summary['profit_factor'] = self.performance_metrics.get('profit_factor', 0)

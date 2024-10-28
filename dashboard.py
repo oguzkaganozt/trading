@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 from strategies.rsi_sma import RSI_SMA
 from strategies.mfi_sma import MFI_SMA
 from strategies.macd_mfi import MACD_MFI
 from multiprocessing import Pool
-
+import os
 strategy_map = {
     "RSI-SMA": RSI_SMA,
     "MFI-SMA": MFI_SMA,
@@ -22,7 +23,6 @@ def run_backtest(args):
     return strategy.backtest(duration)
 
 def show_dashboard():
-    st.title("Dashboard")
     st.sidebar.title("Menu")
     dashboard_type = st.sidebar.selectbox("Select Dashboard", ["Backtesting", "Live Simulation", "Live Trading"], index=0)
 
@@ -42,6 +42,17 @@ def show_live_simulation_dashboard():
     pass
 
 def show_backtesting_dashboard():
+    # Add custom CSS to left-align content
+    st.markdown("""
+        <style>
+        .block-container {
+            padding-left: 2rem;
+            padding-right: 2rem;
+            max-width: 80%;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
     st.title("Backtesting")
     
     # Strategy selection
@@ -119,6 +130,12 @@ def show_backtesting_dashboard():
     
     # Start button
     if st.button("Start Backtesting"):
+        # Clear and recreate graphs folder
+        if os.path.exists("graphs"):
+            for file in os.listdir("graphs"):
+                os.remove(os.path.join("graphs", file))
+        os.makedirs("graphs", exist_ok=True)
+        
         # Create strategy instances based on configuration
         strategies = []
         for coin in coins:
@@ -145,7 +162,6 @@ def show_backtesting_dashboard():
                         if result is not None:  # Add null check
                             results.append(result)
                             st.write(f"Completed backtest for {strategies[i].symbol}")
-                            st.write(result["graph_url"])
                         else:
                             st.warning(f"No results for {strategies[i].symbol}")
                         status.update(label=f"Backtest {i + 1}/{len(strategies)}")
@@ -155,7 +171,17 @@ def show_backtesting_dashboard():
                     status.update(label=f"Error: {str(e)}", state="error")
                     st.error(f"An error occurred during backtesting: {str(e)}")
         
-        st.write(results)
+        # Create tabs for each result
+        if results:            
+            tabs = st.tabs([f"Result for {result['symbol']} {result['interval']}" for result in results])
+            
+            for tab, result in zip(tabs, results):
+                with tab:
+                    with open("./"+result["graph_url"],'r') as f: 
+                        html_data = f.read()
+                    
+                    # Show in webpage
+                    st.components.v1.html(html_data, scrolling=True, width=1700, height=1200)
         
         # Return configuration and results
         return results

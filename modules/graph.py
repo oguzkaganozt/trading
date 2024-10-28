@@ -2,6 +2,7 @@
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import pandas as pd
+import os
 
 color_palette = ["red", "blue", "green", "brown", "purple", "orange", "cyan", "pink", "gray", "black"]
 
@@ -159,26 +160,12 @@ def draw_graph(df, limit=60, summary=None):
     # Update all y-axes
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGrey')
 
-    # Try different display methods
+    # Save graph to HTML file
     try:
-        # Method 1: Default show
-        fig.write_html("graph.html")
-        summary["graph_url"] = "graph.html"
-        fig.show()
+        file_name = f"{summary['name']}-{summary['symbol']}-{summary['interval']}.html"
+        fig.write_html(f"graphs/{file_name}")
+        summary["graph_url"] = f"graphs/{file_name}"
     except Exception as e1:
-        print(f"Method 1 failed: {e1}")
-        try:
-            # Method 2: Using browser
-            import plotly.io as pio
-            pio.renderers.default = "browser"
-            fig.show()
-        except Exception as e2:
-            print(f"Method 2 failed: {e2}")
-            try:
-                # Method 3: Save to HTML file
-                fig.write_html("graph.html")
-                print("Graph saved to graph.html")
-            except Exception as e3:
-                print(f"Method 3 failed: {e3}")
-                
+        print(f"Error saving graph to HTML file: {e1}")
+
     return True
