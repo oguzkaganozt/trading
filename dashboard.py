@@ -5,12 +5,14 @@ import pandas as pd
 from strategies.rsi_sma import RSI_SMA
 from strategies.mfi_sma import MFI_SMA
 from strategies.macd_mfi import MACD_MFI
+from strategies.mfi_sma_macd import MFI_SMA_MACD
 from multiprocessing import Pool
 import os
 strategy_map = {
     "RSI-SMA": RSI_SMA,
     "MFI-SMA": MFI_SMA,
-    "MACD-MFI": MACD_MFI
+    "MACD-MFI": MACD_MFI,
+    "MFI-SMA-MACD": MFI_SMA_MACD
 }
 
 coin_pairs = ["BTC/USDT", 
