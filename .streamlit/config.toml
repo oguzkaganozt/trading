@@ -2,6 +2,7 @@
 base="light"
 primaryColor="#2a63d0"
 font="monospace"
+fontWeight="bold"
 backgroundColor="#f0f2f6"
 secondaryBackgroundColor="#abadb3"
 textColor="#000000"

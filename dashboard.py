@@ -94,7 +94,7 @@ def show_backtesting_dashboard():
 
     # Duration selection
     duration = st.select_slider(
-        "Select Duration",
+        "Select Duration(Bars)",
         options=[100, 200, 300, 400, 500],
         value=300
     )
