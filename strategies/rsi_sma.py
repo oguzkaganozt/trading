@@ -3,6 +3,8 @@ import pandas as pd
 import pandas_ta as ta
 
 class RSI_SMA(Strategy):
+    parent_interval_supported = False
+    
     def check_entry(self):
         if len(self.data) < 28:  # We need at least 28 data points for RSI(14) and its SMA(14)
             return False

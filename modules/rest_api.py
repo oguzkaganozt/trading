@@ -1,13 +1,6 @@
 import requests     
 import pandas as pd
 
-exit_info = {
-    'exit_price': 100.5,
-    'partial_close_price': 99.8,
-    'position_size': 0.5,
-    'percentage_gain_loss': 0.03
-}
-
 def kraken_request(symbol, interval = "1h"):
     # 1m = 1, 5m = 5, 15m = 15, 30m = 30, 1h = 60, 4h = 240, 1d = 1440, 1w = 10080, 15d = 21600
     multiplier = 60

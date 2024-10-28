@@ -1,8 +1,7 @@
 MANDATORY
-- günlükten 4 saatliklere geçiş
-- günlükten 4 saatliğe yada haftalıktan günlüğe geçişte indikatörlerin tarihlerinin eşitlenmesi
 - add stop loss and trailing stop loss different methods
-- dashboard for live trading or simulation
+- dashboard for backtesting, live simulation and live trading
+- günlükten 4 saatliğe yada haftalıktan günlüğe geçişte indikatörlerin tarihlerinin eşitlenmesi
 
 OPTIONAL
 - add increase_position to increase position size in an existing position

@@ -3,6 +3,8 @@ import pandas as pd
 import pandas_ta as ta
 
 class MACD_MFI(Strategy):
+    parent_interval_supported = True
+
     def calculate_mfi(self, period=14):
         # Calculate typical price
         typical_price = (self.data['high'] + self.data['low'] + self.data['close']) / 3
@@ -32,7 +34,7 @@ class MACD_MFI(Strategy):
         mfi = 100 - (100 / (1 + money_flow_ratio))
         
         return mfi
-
+    
     def get_indicators(self):
         # Check if we have enough data
         if len(self.data) < 35:  # We need at least 35 data points for MFI(14) and its SMA(14)

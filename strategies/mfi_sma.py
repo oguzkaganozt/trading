@@ -3,9 +3,12 @@ import pandas as pd
 import pandas_ta as ta
 
 class MFI_SMA(Strategy):
+    parent_interval_supported = False
+    
     def get_indicators(self):
-        if len(self.data) < 35:  # We need at least 35 data points for MFI(14) and its SMA(14)
+        if len(self.data) < 35:
             return None, None
+        
         mfi = self.data.ta.mfi(high=self.data['high'], low=self.data['low'], close=self.data['close'], volume=self.data['volume'], length=7, append=True)
         mfi_sma = self.data.ta.sma(close=self.data['MFI_7'], length=14, append=True, suffix='MFI')
         return mfi, mfi_sma

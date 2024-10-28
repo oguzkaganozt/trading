@@ -28,6 +28,7 @@ class Strategy(ABC):
         self.trade_history = []
         self.performance_metrics = {}
         self.slippage_percentage = 0.1
+        self.parent_interval_supported = False
         
         # Check if symbol is valid
         # try:
@@ -82,6 +83,10 @@ class Strategy(ABC):
         self.logger.info(f"  - Risk Percentage: {self.risk_percentage}%")
         self.logger.info("--------------------------------")
 
+    @classmethod
+    def is_parent_interval_supported(cls):
+        return cls.parent_interval_supported
+
     # Check entry
     @abstractmethod
     def check_entry(self):
@@ -134,7 +139,11 @@ class Strategy(ABC):
     def get_data(self, limit=180):
         try:
             new_data = get_ohlc(self.symbol, interval=self.interval, limit=limit)
-            new_data_parent = get_ohlc(self.symbol, interval=self.parent_interval, limit=limit)
+            if self.parent_interval_supported:
+                new_data_parent = get_ohlc(self.symbol, interval=self.parent_interval, limit=limit)
+            else:
+                new_data_parent = pd.DataFrame()
+
             if self.data.empty:
                 self.data = new_data
                 self.data_parent = new_data_parent
@@ -145,9 +154,10 @@ class Strategy(ABC):
                 self.data = pd.concat([self.data, new_data])
 
                 # Append only new data points parent
-                last_timestamp_parent = self.data_parent.index[-1]
-                new_data_parent = new_data_parent[new_data_parent.index > last_timestamp_parent]
-                self.data_parent = pd.concat([self.data_parent, new_data_parent])
+                if self.parent_interval_supported:
+                    last_timestamp_parent = self.data_parent.index[-1]
+                    new_data_parent = new_data_parent[new_data_parent.index > last_timestamp_parent]
+                    self.data_parent = pd.concat([self.data_parent, new_data_parent])
         except Exception as e:
             self.logger.error(f"Error getting data: {str(e)}")
             raise

@@ -2,7 +2,9 @@ from modules.strategy import Strategy
 import pandas as pd
 import pandas_ta as ta
 
-class MFI_SMA(Strategy):
+class MFI_SMA_EMA(Strategy):
+    parent_interval_supported = False
+
     def get_indicators(self):
         if len(self.data) < 35:  # We need at least 35 data points for MFI(14) and its SMA(14)
             return None, None
