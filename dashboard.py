@@ -13,7 +13,34 @@ strategy_map = {
     "MACD-MFI": MACD_MFI
 }
 
-coin_pairs = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "ADA/USDT"]
+coin_pairs = ["BTC/USDT", 
+              "ETH/USDT", 
+              "SOL/USDT", 
+              "XRP/USDT",
+              "DOGE/USDT",
+              "TON/USDT",
+              "ADA/USDT",
+              "AVAX/USDT",
+              "SHIB/USDT",
+              "WBTC/USDT",
+              "DOT/USDT", 
+              "DAI/USDT", 
+              "LINK/USDT", 
+              "UNI/USDT", 
+              "BCH/USDT", 
+              "LTC/USDT", 
+              "EOS/USDT", 
+              "TRX/USDT",
+              "XLM/USDT",
+              "XMR/USDT", 
+              "NEO/USDT", 
+              "ETC/USDT", 
+              "ZEC/USDT", 
+              "BTS/USDT", 
+              "QTUM/USDT", 
+              "ONT/USDT", 
+              "VET/USDT", 
+              "IOTA/USDT"]
 
 def get_strategy_class(strategy_name):
     return strategy_map.get(strategy_name)
