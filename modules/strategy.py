@@ -9,11 +9,11 @@ from logging.handlers import RotatingFileHandler
 
 # A base class for all strategies
 class Strategy(ABC):
-    def __init__(self, symbol, interval, parent_interval, balance, risk_percentage=10, trailing_stop_percentage=0):
+    def __init__(self, symbol, interval, balance, parent_interval=None, risk_percentage=10, trailing_stop_percentage=0):
         self.name = self.__class__.__name__
         self.symbol = symbol
-        self.interval = interval # minute, hour, 4-hour, day, week, 15-days
-        self.parent_interval = parent_interval # minute, hour, 4-hour, day, week, 15-days
+        self.interval = interval # 30m, 1h, 4h, 1d, 1w
+        self.parent_interval = parent_interval # 1h, 4h, 1d, 1w, 15d
         self.active = True
         self.simulation = True
         self.position = None
@@ -29,8 +29,19 @@ class Strategy(ABC):
         self.trade_history = []
         self.performance_metrics = {}
         self.slippage_percentage = 0.1
-        self.parent_interval_supported = False
+        self.parent_interval_supported = parent_interval is not None
+        self.parent_update_period = None
+        self.data_update_counter = 0
+        self.latest_parent_data = None
 
+        # Fix: Validate that parent interval is larger than base interval
+        if self.parent_interval_supported:
+            base_minutes = self.interval_in_minutes(self.interval)
+            parent_minutes = self.interval_in_minutes(self.parent_interval)
+            if parent_minutes <= base_minutes:
+                raise ValueError(f"Parent interval ({parent_interval}) must be larger than base interval ({interval})")
+            self.calculate_parent_update_period()
+        
         # Set up logger
         self.logger = logging.getLogger(f"{self.name}_{self.symbol}")
         self.logger.setLevel(logging.INFO)
@@ -69,16 +80,17 @@ class Strategy(ABC):
         self.logger.addHandler(fh)
         self.logger.addHandler(ch)
 
+        # Log strategy details
         self.logger.info(f"Initialized {self.name} strategy for {self.symbol}")
         self.logger.info(f"  - interval: {self.interval}")
+        self.logger.info(f"  - parent interval: {self.parent_interval}")
         self.logger.info(f"  - Balance: ${self.balance}")
         self.logger.info(f"  - Trailing Stop Percentage: {self.trailing_stop_percentage}%")
         self.logger.info(f"  - Risk Percentage: {self.risk_percentage}%")
         self.logger.info("--------------------------------")
 
-    @classmethod
-    def is_parent_interval_supported(cls):
-        return cls.parent_interval_supported
+        # Validate timeframe relationship
+        self.validate_timeframe_relationship()
 
     # Check entry
     @abstractmethod
@@ -104,6 +116,8 @@ class Strategy(ABC):
         def run_strategy():
             try:
                 self.get_data()
+                self.get_parent_data()
+                self.synchronize_data()
 
                 if self.position is None:
                     entry_signal = self.check_entry()
@@ -129,30 +143,47 @@ class Strategy(ABC):
         thread.start()
     
     # Get data
-    def get_data(self, limit=180):
+    def get_data(self, limit=180):       
         try:
             new_data = get_ohlc(self.symbol, interval=self.interval, limit=limit)
-            if self.parent_interval_supported:
-                new_data_parent = get_ohlc(self.symbol, interval=self.parent_interval, limit=limit)
-            else:
-                new_data_parent = pd.DataFrame()
 
             if self.data.empty:
                 self.data = new_data
-                self.data_parent = new_data_parent
             else:
                 # Append only new data points
                 last_timestamp = self.data.index[-1]
                 new_data = new_data[new_data.index > last_timestamp]
                 self.data = pd.concat([self.data, new_data])
-
-                # Append only new data points parent
-                if self.parent_interval_supported:
+        except Exception as e:
+            self.logger.error(f"Error getting data: {str(e)}")
+            raise
+    
+    # Get parent data
+    def get_parent_data(self, limit=50): 
+        if not self.parent_interval_supported:
+            return
+        
+        try:
+            # Reset counter if it exceeds the update period
+            if self.data_update_counter >= self.parent_update_period:
+                self.data_update_counter = 0
+                
+            if self.data_update_counter == 0:
+                new_data_parent = get_ohlc(self.symbol, interval=self.parent_interval, limit=limit)
+                
+                if self.data_parent.empty:
+                    self.data_parent = new_data_parent
+                else:
                     last_timestamp_parent = self.data_parent.index[-1]
                     new_data_parent = new_data_parent[new_data_parent.index > last_timestamp_parent]
                     self.data_parent = pd.concat([self.data_parent, new_data_parent])
+                    
+                self.logger.debug(f"Updated parent data at counter {self.data_update_counter}")
+            
+            self.data_update_counter += 1
+            
         except Exception as e:
-            self.logger.error(f"Error getting data: {str(e)}")
+            self.logger.error(f"Error getting parent data: {str(e)}")
             raise
     
     # Long position
@@ -437,8 +468,11 @@ class Strategy(ABC):
 
         # Get data for the duration of the backtest
         self.get_data(limit=duration+offset)
+        self.get_parent_data(limit=duration+offset)
         original_data = self.data.copy()
-        original_data_parent = self.data_parent.copy()
+
+        if self.parent_interval_supported:
+            original_data_parent = self.data_parent.copy()
         
         total_periods = len(original_data) - offset
 
@@ -449,7 +483,10 @@ class Strategy(ABC):
         for i in range(total_periods):
             # Use data up to the current index
             self.data = original_data[:i+1+offset].copy()
-            self.data_parent = original_data_parent[:i+1+offset].copy()
+            if self.parent_interval_supported:
+                self.data_parent = original_data_parent[:i+1+offset].copy()
+                # Add synchronization here
+                self.synchronize_data()
             
             # Update progress bar
             self.print_progress_bar(i + 1, total_periods)
@@ -512,9 +549,9 @@ class Strategy(ABC):
         self.logger.info(results)
         return summary
 
-    # Calculate sleep duration
-    def calculate_sleep_duration(self):
-        interval_in_seconds = {
+    @staticmethod
+    def interval_in_minutes(interval):
+        interval_in_minutes = {
             '1m': 1,
             '5m': 5,
             '15m': 15,
@@ -525,7 +562,40 @@ class Strategy(ABC):
             '1w': 10080,
             '15d': 21600
         }
-        return interval_in_seconds.get(self.interval, 60)
+        if interval not in interval_in_minutes:
+            raise ValueError(f"Invalid interval: {interval}")
+        return interval_in_minutes[interval]
+
+    # Calculate parent update period
+    def calculate_parent_update_period(self):
+        """
+        Calculate how often to update parent timeframe data based on the ratio
+        between parent and base intervals
+        """
+        try:
+            base_minutes = self.interval_in_minutes(self.interval)
+            parent_minutes = self.interval_in_minutes(self.parent_interval)
+            
+            # Calculate the ratio between intervals
+            self.parent_update_period = int(parent_minutes / base_minutes)
+            
+            # Validate the relationship
+            if parent_minutes % base_minutes != 0:
+                self.logger.warning(
+                    f"Parent interval ({self.parent_interval}) is not a clean multiple "
+                    f"of base interval ({self.interval}). This might cause synchronization issues."
+                )
+            
+            self.logger.info(f"Parent update period set to {self.parent_update_period} base intervals")
+            
+        except Exception as e:
+            self.logger.error(f"Error calculating parent update period: {str(e)}")
+            raise
+    
+    # Calculate sleep duration
+    def calculate_sleep_duration(self):
+        base_minutes = self.interval_in_minutes(self.interval)
+        return base_minutes * 60
     
     # Put live
     def put_live(self):
@@ -557,3 +627,63 @@ class Strategy(ABC):
         if current == total: 
             print()
 
+    # Synchronize data and parent data
+    def synchronize_data(self):
+        """
+        Synchronize parent timeframe data with current timeframe.
+        Ensures we're using the correct parent candle for each current timeframe candle.
+        """
+        if not self.parent_interval_supported or self.data_parent.empty or self.data.empty:
+            return
+
+        try:
+            current_time = self.data.index[-1]
+            
+            # Find the parent candle that contains the current time
+            parent_data_current = self.data_parent[self.data_parent.index <= current_time]
+            
+            if parent_data_current.empty:
+                self.logger.warning("No parent data found for current timestamp")
+                self.latest_parent_data = None
+                return
+
+            latest_parent_time = parent_data_current.index[-1]
+            next_parent_time = latest_parent_time + pd.Timedelta(self.parent_interval)
+            
+            # Verify current time falls within the parent candle's timeframe
+            if latest_parent_time <= current_time < next_parent_time:
+                self.latest_parent_data = parent_data_current.iloc[-1]
+                self.logger.debug(f"Synchronized with parent candle: {latest_parent_time}")
+            else:
+                self.logger.warning(f"Current time {current_time} doesn't align with parent timeframe")
+                self.latest_parent_data = None
+
+        except Exception as e:
+            self.logger.error(f"Error during data synchronization: {str(e)}")
+            self.latest_parent_data = None
+
+    def validate_timeframe_relationship(self):
+        """
+        Validate that the parent timeframe is properly related to the base timeframe
+        """
+        if not self.parent_interval_supported:
+            return True
+            
+        base_minutes = self.interval_in_minutes(self.interval)
+        parent_minutes = self.interval_in_minutes(self.parent_interval)
+        
+        # Parent interval must be larger
+        if parent_minutes <= base_minutes:
+            raise ValueError(
+                f"Parent interval ({self.parent_interval}) must be larger than "
+                f"base interval ({self.interval})"
+            )
+        
+        # Ideally, parent should be a multiple of base
+        if parent_minutes % base_minutes != 0:
+            self.logger.warning(
+                f"Parent interval ({parent_minutes}m) is not a clean multiple of "
+                f"base interval ({base_minutes}m). This might cause synchronization issues."
+            )
+        
+        return True

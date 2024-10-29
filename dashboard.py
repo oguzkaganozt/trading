@@ -4,7 +4,7 @@ import streamlit.components.v1 as components
 import pandas as pd
 from multiprocessing import Pool
 import os
-
+import json
 from strategies.rsi_sma import RSI_SMA
 from strategies.mfi_sma import MFI_SMA
 from strategies.mfi_sma_macd import MFI_SMA_MACD
@@ -17,64 +17,12 @@ strategy_map = {
     "MFI-SMA-MACD-10DIFF": MFI_SMA_MACD_10DIFF
 }
 
-coin_pairs = ["BTC/USDT", 
-              "ETH/USDT", 
-              "SOL/USDT", 
-              "XRP/USDT",
-              "DOGE/USDT",
-              "TRX/USDT",
-              "ADA/USDT",
-              "AVAX/USDT",
-              "WBTC/USDT",
-              "SHIB/USDT", 
-              "BCH/USDT", 
-              "LINK/USDT", 
-              "DOT/USDT", 
-              "LTC/USDT", 
-              "NEAR/USDT", 
-              "APT/USDT", 
-              "SUI/USDT",
-              "UNI/USDT",
-              "TAO/USDT", 
-              "PEPE/USDT", 
-              "ICP/USDT", 
-              "DAI/USDT", 
-              "FET/USDT", 
-              "XMR/USDT", 
-              "ETC/USDT", 
-              "XLM/USDT", 
-              "STX/USDT",
-              "WIF/USDT",
-              "AAVE/USDT",
-              "IMX/USDT",
-              "FIL/USDT",
-              "ARB/USDT",
-              "OP/USDT",
-              "MNT/USDT",
-              "RUNE/USDT",
-              "FTM/USDT",
-              "RENDER/USDT",
-              "INJ/USDT",
-              "ATOM/USDT",
-              "POPCAT/USDT",
-              "GRT/USDT",
-              "BONK/USDT",
-              "JUP/USDT",
-              "SEI/USDT",
-              "PYTH/USDT",
-              "FLOKI/USDT",
-              "HNT/USDT",
-              "TIA/USDT",
-              "MKR/USDT",
-              "ONDO/USDT",
-              "ALGO/USDT",
-              "ENA/USDT",
-              "MSOL/USDT",
-              "BEAM/USDT",
-              "LDO/USDT",
-              "QNT/USDT",
-              "RAY/USDT"
-              ]
+coin_pairs = []
+
+def get_coin_pairs():
+    with open("./coins.json", 'r') as f:
+        coin_pairs = json.load(f)
+    return coin_pairs
 
 def get_strategy_class(strategy_name):
     return strategy_map.get(strategy_name)
