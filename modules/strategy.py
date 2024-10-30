@@ -11,24 +11,22 @@ class Strategy(ABC):
     def __init__(self, symbol, interval, balance, parent_interval=None, risk_percentage=10, trailing_stop_percentage=0):
         self.name = self.__class__.__name__
         self.symbol = symbol
+        self.balance = balance
         self.interval = interval # 30m, 1h, 4h, 1d, 1w
         self.parent_interval = parent_interval # 1h, 4h, 1d, 1w, 15d
+        self.data_manager = DataManager(symbol, interval, parent_interval)
+        self.logger = logger
         self.active = True
         self.simulation = True
-        self.position = None
-        self.balance = balance
         self.trailing_stop_percentage = trailing_stop_percentage
         self.risk_percentage = risk_percentage
+        self.position = None
         self.entry_price = 0
         self.stop_loss_price = 0
         self.position_size = 0
         self.trade_history = []
         self.performance_metrics = {}
         self.slippage_percentage = 0.1
-        self.parent_update_period = None
-        self.data_manager = DataManager(symbol, interval, parent_interval)
-        self.logger = logger
-        self.extreme_price_since_entry = 0
 
         # Log strategy details
         self.logger.info(f"Initialized {self.name} strategy for {self.symbol}")
