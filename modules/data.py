@@ -43,6 +43,12 @@ class DataManager:
         if interval not in interval_in_minutes:
             raise ValueError(f"Invalid interval: {interval}")
         return interval_in_minutes[interval]
+    
+    # Update data
+    def update_data(self, limit=180):
+        self._get_data(limit)
+        self._get_parent_data()
+        self._synchronize_data()
 
     # Get latest data
     def get_latest_data(self):
@@ -59,12 +65,6 @@ class DataManager:
     # Get latest parent data index
     def get_latest_parent_data_index(self):
         return self.data_parent.index[-1]
-    
-    # Get data
-    def get_data(self, limit=180):
-        self._get_data(limit)
-        self._get_parent_data()
-        self._synchronize_data()
 
     # Calculate sleep duration
     def get_sleep_duration(self):
@@ -105,11 +105,18 @@ class DataManager:
             'Accept': 'application/json'
         }
 
-        response = requests.get(url, params=payload, headers=headers)
-        data = response.json()
-        data = next(iter(data['result'].values()))
-
-        return data
+        try:
+            response = requests.get(url, params=payload, headers=headers, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            if 'error' in data and data['error']:
+                raise ValueError(f"Kraken API error: {data['error']}")
+            
+            return next(iter(data['result'].values()))
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"API request failed: {str(e)}")
+            raise
 
     def _get_ohlc(self, symbol, interval, limit=180):
         # Get the data from Kraken

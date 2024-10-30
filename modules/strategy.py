@@ -111,7 +111,7 @@ class Strategy(ABC):
 
         def run_strategy():
             try:
-                self.data_manager.get_data()
+                self.data_manager.update_data()
 
                 if self.position is None:
                     entry_signal = self.check_entry()
@@ -307,7 +307,7 @@ class Strategy(ABC):
         self.logger.info(f"Starting backtest for {duration} periods")
 
         # Get data for the duration of the backtest
-        self.data_manager.get_data(limit=duration+offset)
+        self.data_manager.update_data(limit=duration+offset)
         original_data = self.data_manager.data.copy()
 
         if self.data_manager.parent_interval_supported:
