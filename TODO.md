@@ -1,9 +1,9 @@
 MANDATORY
+- make use of support and resistance levels in a strategy
 - graph row larının otomatik olarak arttırılması yani her indicator için fixed bi row yerine arttırarak koymak
 - split strategy class into multiple files
 - dashboard should be turkish
 - implement stop loss with trailing or without trailing
-- make use of support and resistance levels in a strategy
 - strategy descriptions in mathematical format (e.g. RSI_14 > 50)
 - implement live simulation dashboard and testing
 - implement live trading dashboard and trading

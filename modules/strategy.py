@@ -1,12 +1,10 @@
 from abc import ABC, abstractmethod
-import logging
-from modules.rest_api import get_ohlc
 import datetime
 from time import sleep
 import pandas as pd
 from modules.graph import draw_graph
-from logging.handlers import RotatingFileHandler
-import os
+from modules.logger import logger 
+from modules.data import get_ohlc
 
 # A base class for all strategies
 class Strategy(ABC):
@@ -34,48 +32,7 @@ class Strategy(ABC):
         self.parent_update_period = None
         self.data_update_counter = 0
         self.latest_parent_data = None
-                
-        # Clear all logs in file if it exists
-        if os.path.exists(f"logs/{self.name}_{self.symbol}.log"):
-            with open(f"logs/{self.name}_{self.symbol}.log", 'w') as file:
-                file.truncate()
-        
-        # Set up logger
-        self.logger = logging.getLogger(f"{self.name}_{self.symbol}")
-        self.logger.setLevel(logging.INFO)
-        
-        # Create a rotating file handler
-        if not os.path.exists('logs'):
-            os.makedirs('logs')
-        log_file = f"logs/{self.name}_{self.symbol}.log"
-        fh = RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=10)  # 10MB per file, keep 10 old files
-        fh.setLevel(logging.INFO)
-        
-        # Create a console handler
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.INFO)
-        
-        # Create a more readable formatter
-        class ColoredFormatter(logging.Formatter):
-            COLORS = {
-                'INFO': '\033[92m',  # Green
-                'WARNING': '\033[93m',  # Yellow
-                'ERROR': '\033[91m',  # Red
-                'CRITICAL': '\033[91m\033[1m',  # Bold Red
-                'RESET': '\033[0m'  # Reset color
-            }
-
-            def format(self, record):
-                log_message = super().format(record)
-                return f"{self.COLORS.get(record.levelname, self.COLORS['RESET'])}{log_message}{self.COLORS['RESET']}"
-
-        formatter = ColoredFormatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %I:%M:%S %p')
-        fh.setFormatter(formatter)
-        ch.setFormatter(formatter)
-        
-        # Add the handlers to the logger
-        self.logger.addHandler(fh)
-        self.logger.addHandler(ch)
+        self.logger = logger
 
         # Log strategy details
         self.logger.info(f"Initialized {self.name} strategy for {self.symbol}")
@@ -459,14 +416,6 @@ class Strategy(ABC):
 
         self.logger.info(f"Starting backtest for {duration} periods")
 
-        # Temporarily remove console handler
-        console_handler = None
-        for handler in self.logger.handlers:
-            if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
-                console_handler = handler
-                self.logger.removeHandler(handler)
-                break
-
         # Calculate appropriate offsets for both timeframes
         offset = 50
         if self.parent_interval_supported:
@@ -527,10 +476,6 @@ class Strategy(ABC):
             except Exception as e:
                 self.logger.error(f"Error during backtest execution: {str(e)}")
                 break
-
-        # Restore console handler
-        if console_handler:
-            self.logger.addHandler(console_handler)
 
         self.logger.info("Backtest completed")
         self.logger.info("Graphing results")
