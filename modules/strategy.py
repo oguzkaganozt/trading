@@ -6,6 +6,7 @@ from time import sleep
 import pandas as pd
 from modules.graph import draw_graph
 from logging.handlers import RotatingFileHandler
+import os
 
 # A base class for all strategies
 class Strategy(ABC):
@@ -33,17 +34,21 @@ class Strategy(ABC):
         self.parent_update_period = None
         self.data_update_counter = 0
         self.latest_parent_data = None
+                
+        # Clear all logs in file if it exists
+        if os.path.exists(f"logs/{self.name}_{self.symbol}.log"):
+            with open(f"logs/{self.name}_{self.symbol}.log", 'w') as file:
+                file.truncate()
         
         # Set up logger
         self.logger = logging.getLogger(f"{self.name}_{self.symbol}")
         self.logger.setLevel(logging.INFO)
         
         # Create a rotating file handler
-        import os
         if not os.path.exists('logs'):
             os.makedirs('logs')
         log_file = f"logs/{self.name}_{self.symbol}.log"
-        fh = RotatingFileHandler(log_file, maxBytes=1024*1024, backupCount=5)  # 1MB per file, keep 5 old files
+        fh = RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=10)  # 10MB per file, keep 10 old files
         fh.setLevel(logging.INFO)
         
         # Create a console handler
@@ -451,10 +456,6 @@ class Strategy(ABC):
         self.simulation = True
         self.backtest = True
         offset = 50
-        
-        # Clear all logs in file
-        with open(f"logs/{self.name}_{self.symbol}.log", 'w') as file:
-            file.truncate()
 
         self.logger.info(f"Starting backtest for {duration} periods")
 

@@ -23,8 +23,7 @@ class MFI_SMA_PARENT_MACD(Strategy):
         mfi_prev = float(mfi.iloc[-2])
         mfi_sma_current = float(mfi_sma.iloc[-1])
         mfi_sma_prev = float(mfi_sma.iloc[-2])
-
-        self.logger.info(f"MFI: {mfi_current} MFI SMA: {mfi_sma_current} MACD Parent: {macd_parent.iloc[-1]}")
+        
         self.logger.info(f"parent data time: {self.data_parent.index[-1]}")
         
         # Check if MFI crosses above its SMA

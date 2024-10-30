@@ -1,6 +1,6 @@
 credentials.json
 /__pycache__
-*.pyc
+**/*.pyc
 
 # Environment variables
 .env
