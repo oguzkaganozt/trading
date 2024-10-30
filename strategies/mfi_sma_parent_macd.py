@@ -10,7 +10,8 @@ class MFI_SMA_PARENT_MACD(Strategy):
         self.parent_interval_supported = True
         mfi = self.data_manager.data.ta.mfi(high=self.data_manager.data['high'], low=self.data_manager.data['low'], close=self.data_manager.data['close'], volume=self.data_manager.data['volume'], length=7, append=True)
         mfi_sma = self.data_manager.data.ta.sma(close=self.data_manager.data['MFI_7'], length=14, append=True, suffix='MFI')
-        macd_parent = self.data_manager.data_parent.ta.macd(close=self.data_manager.data_parent['close'], append=True)
+        # macd_parent = self.data_manager.data_parent.ta.macd(close=self.data_manager.data_parent['close'], append=True)
+        macd_parent = 1
         return mfi, mfi_sma, macd_parent
 
     def check_entry(self):

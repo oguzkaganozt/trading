@@ -81,21 +81,18 @@ def show_live_simulation_dashboard():
     )
     
     # Timeframe selection
-    timeframe = st.select_slider(
+    interval = st.select_slider(
         "Select Timeframe",
-        options=["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w", "15d"],
-        value="1d"
+        options=["30m", "1h", "4h", "1d", "1w"],
+        value="4h"
     )
 
     # Parent interval selection
-    if strategy_class.is_parent_interval_supported():
-        parent_interval = st.select_slider(
-            "Select Parent Interval",
-            options=["1h", "4h", "1d", "1w", "15d"],
-            value="1w"
-        )
-    else:
-        parent_interval = None
+    parent_interval = st.select_slider(
+        "Select Parent Interval",
+        options=["1h", "4h", "1d", "1w", "15d"],
+        value="1d"
+    )
     
     # Trading parameters in columns
     col1, col2, col3 = st.columns(3)
@@ -141,7 +138,7 @@ def show_live_simulation_dashboard():
             symbol = coin.split('/')[0] + "USD"
             strategy_instance = strategy_class(
                 symbol=symbol,
-                interval=timeframe,
+                interval=interval,
                 parent_interval=parent_interval,
                 balance=balance,
                 risk_percentage=risk_percentage,
@@ -290,9 +287,18 @@ def show_backtesting_dashboard():
         # Write combined results
         total_win_trades = sum(result["win_trades"] for result in results)
         total_loss_trades = sum(result["loss_trades"] for result in results)
-        win_rate = total_win_trades * 100 / (total_win_trades + total_loss_trades)
-        average_profit_factor = sum(result["profit_factor"] for result in results) / len(results)
-        average_profit_loss_percentage = sum(result["total_profit_loss_percentage"] for result in results) / len(results)
+        
+        # Handle case where there are no trades
+        if total_win_trades == 0 and total_loss_trades == 0:
+            win_rate = 0
+            average_profit_factor = 0
+            average_profit_loss_percentage = 0
+            st.warning("No trades were executed during the backtest period")
+        else:
+            win_rate = total_win_trades * 100 / (total_win_trades + total_loss_trades)
+            average_profit_factor = sum(result["profit_factor"] for result in results) / len(results)
+            average_profit_loss_percentage = sum(result["total_profit_loss_percentage"] for result in results) / len(results)
+        
         st.write(f"Win Rate: {win_rate:.2f}%")
         st.write(f"Average Profit Factor: {average_profit_factor:.2f}")
         st.write(f"Average Percentage Gain: {average_profit_loss_percentage:.2f}%")

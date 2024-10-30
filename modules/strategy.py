@@ -103,6 +103,21 @@ class Strategy(ABC):
         # Adjust entry price after partial close
         self.adjust_entry_price(close_size, profit_loss)
     
+    # Put live
+    def put_live(self):
+        self.simulation = False
+        self.active = True
+    
+    # Put live simulation
+    def put_live_simulation(self):
+        self.simulation = True
+        self.active = True
+    
+    # Put inactive
+    def put_inactive(self):
+        self.simulation = False
+        self.active = False
+    
     # Run strategy
     def run(self):
         if not self.active:
@@ -359,9 +374,9 @@ class Strategy(ABC):
                 self.logger.error(f"Error during backtest execution: {str(e)}")
                 break
 
-        self.logger.info("Backtest completed")
-        self.logger.info("Graphing results")
+        self.logger.info("Backtest completed, Graphing results")
         summary = self.log_backtest_results()
+        print(summary)
         draw_graph(self.data_manager.data, limit=duration, summary=summary)
         self.logger.info("Results graphed")
         return summary
@@ -382,25 +397,11 @@ class Strategy(ABC):
         summary['win_trades'] = self.performance_metrics.get('win_trades', 0)
         summary['loss_trades'] = self.performance_metrics.get('loss_trades', 0)
         summary['profit_factor'] = self.performance_metrics.get('profit_factor', 0)
+        summary['total_profit_loss'] = self.performance_metrics.get('total_profit_loss', 0)
         summary['total_profit_loss_percentage'] = self.performance_metrics.get('total_profit_loss_percentage', 0)
 
         self.logger.info(results)
         return summary
-    
-    # Put live
-    def put_live(self):
-        self.simulation = False
-        self.active = True
-    
-    # Put live simulation
-    def put_live_simulation(self):
-        self.simulation = True
-        self.active = True
-    
-    # Put inactive
-    def put_inactive(self):
-        self.simulation = False
-        self.active = False
 
     # Update strategy parameters dynamically
     def update_parameters(self, **kwargs):
