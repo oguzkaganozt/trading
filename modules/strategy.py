@@ -29,18 +29,10 @@ class Strategy(ABC):
         self.trade_history = []
         self.performance_metrics = {}
         self.slippage_percentage = 0.1
-        self.parent_interval_supported = parent_interval is not None
+        self.parent_interval_supported = True
         self.parent_update_period = None
         self.data_update_counter = 0
         self.latest_parent_data = None
-
-        # Fix: Validate that parent interval is larger than base interval
-        if self.parent_interval_supported:
-            base_minutes = self.interval_in_minutes(self.interval)
-            parent_minutes = self.interval_in_minutes(self.parent_interval)
-            if parent_minutes <= base_minutes:
-                raise ValueError(f"Parent interval ({parent_interval}) must be larger than base interval ({interval})")
-            self.calculate_parent_update_period()
         
         # Set up logger
         self.logger = logging.getLogger(f"{self.name}_{self.symbol}")
@@ -88,6 +80,14 @@ class Strategy(ABC):
         self.logger.info(f"  - Trailing Stop Percentage: {self.trailing_stop_percentage}%")
         self.logger.info(f"  - Risk Percentage: {self.risk_percentage}%")
         self.logger.info("--------------------------------")
+
+        # Validate that parent interval is larger than base interval
+        if self.parent_interval_supported:
+            base_minutes = self.interval_in_minutes(self.interval)
+            parent_minutes = self.interval_in_minutes(self.parent_interval)
+            if parent_minutes <= base_minutes:
+                raise ValueError(f"Parent interval ({parent_interval}) must be larger than base interval ({interval})")
+            self.calculate_parent_update_period()
 
         # Validate timeframe relationship
         self.validate_timeframe_relationship()
@@ -466,9 +466,16 @@ class Strategy(ABC):
                 self.logger.removeHandler(handler)
                 break
 
+        # Calculate appropriate offsets for both timeframes
+        offset = 50
+        if self.parent_interval_supported:
+            parent_offset = max(50, int(offset * self.interval_in_minutes(self.interval) / self.interval_in_minutes(self.parent_interval)))
+        else:
+            parent_offset = offset
+
         # Get data for the duration of the backtest
         self.get_data(limit=duration+offset)
-        self.get_parent_data(limit=duration+offset)
+        self.get_parent_data(limit=duration+parent_offset)
         original_data = self.data.copy()
 
         if self.parent_interval_supported:
@@ -482,12 +489,14 @@ class Strategy(ABC):
 
         for i in range(total_periods):
             # Use data up to the current index
+            current_time = original_data.index[i+offset]
             self.data = original_data[:i+1+offset].copy()
-            if self.parent_interval_supported:
-                self.data_parent = original_data_parent[:i+1+offset].copy()
-                # Add synchronization here
-                self.synchronize_data()
             
+            if self.parent_interval_supported:
+                # Only include parent data up to the current timestamp
+                self.data_parent = original_data_parent[original_data_parent.index <= current_time].copy()
+                self.synchronize_data()
+
             # Update progress bar
             self.print_progress_bar(i + 1, total_periods)
 

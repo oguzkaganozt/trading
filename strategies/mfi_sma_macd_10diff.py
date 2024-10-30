@@ -3,8 +3,6 @@ import pandas as pd
 import pandas_ta as ta
 
 class MFI_SMA_MACD_10DIFF(Strategy):
-    parent_interval_supported = False
-    
     def get_indicators(self):
         if len(self.data) < 35:
             return None, None

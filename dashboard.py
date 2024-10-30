@@ -5,24 +5,24 @@ import pandas as pd
 from multiprocessing import Pool
 import os
 import json
-from strategies.rsi_sma import RSI_SMA
 from strategies.mfi_sma import MFI_SMA
 from strategies.mfi_sma_macd import MFI_SMA_MACD
 from strategies.mfi_sma_macd_10diff import MFI_SMA_MACD_10DIFF
+from strategies.mfi_sma_parent_macd import MFI_SMA_PARENT_MACD
 
 strategy_map = {
-    "RSI-SMA": RSI_SMA,
     "MFI-SMA": MFI_SMA,
     "MFI-SMA-MACD": MFI_SMA_MACD,
-    "MFI-SMA-MACD-10DIFF": MFI_SMA_MACD_10DIFF
+    "MFI-SMA-MACD-10DIFF": MFI_SMA_MACD_10DIFF,
+    "MFI-SMA-PARENT-MACD": MFI_SMA_PARENT_MACD
 }
-
-coin_pairs = []
 
 def get_coin_pairs():
     with open("./coins.json", 'r') as f:
         coin_pairs = json.load(f)
     return coin_pairs
+
+coin_pairs = get_coin_pairs()
 
 def get_strategy_class(strategy_name):
     return strategy_map.get(strategy_name)
@@ -194,22 +194,19 @@ def show_backtesting_dashboard():
         default=["BTC/USDT"]
     )
     
-    # Timeframe selection
-    timeframe = st.select_slider(
-        "Select Timeframe",
-        options=["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w", "15d"],
-        value="1d"
+    # Interval selection
+    interval = st.select_slider(
+        "Select Interval",
+        options=["30m", "1h", "4h", "1d", "1w"],
+        value="4h"
     )
 
     # Parent interval selection
-    if strategy_class.is_parent_interval_supported():
-        parent_interval = st.select_slider(
-            "Select Parent Interval",
-            options=["1h", "4h", "1d", "1w", "15d"],
-            value="1w"
-        )
-    else:
-        parent_interval = None
+    parent_interval = st.select_slider(
+        "Select Parent Interval",
+        options=["1h", "4h", "1d", "1w", "15d"],
+        value="1d"
+    )
 
     # Duration selection
     duration = st.select_slider(
@@ -262,7 +259,7 @@ def show_backtesting_dashboard():
             symbol = coin.split('/')[0] + "USD"
             strategy_instance = strategy_class(
                 symbol=symbol,
-                interval=timeframe,
+                interval=interval,
                 parent_interval=parent_interval,
                 balance=balance,
                 risk_percentage=risk_percentage,

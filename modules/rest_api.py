@@ -40,6 +40,42 @@ def kraken_request(symbol, interval = "1h"):
 
     return data
 
+def get_ohlc(symbol, interval, limit=180):
+    # Get the data from Kraken
+    data = kraken_request(symbol, interval)
+
+    # Create DataFrame
+    df = pd.DataFrame(data, columns=['timestamp', 'open', 'high', 'low', 'close', 'vwap', 'volume', 'count'])
+    
+    # Convert data types
+    numeric_columns = ['open', 'high', 'low', 'close', 'vwap', 'volume', 'count']
+    df[numeric_columns] = df[numeric_columns].astype(float)
+    
+    # Convert timestamp to datetime with UTC+3 timezone
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s').dt.tz_localize('UTC').dt.tz_convert('Etc/GMT-3')
+    df.set_index('timestamp', inplace=True)
+
+    # If no data is returned, return None
+    if df.empty:
+        return None
+    
+    # Tail the data to get the last limit entries
+    if len(df) > limit:
+        df = df.iloc[-limit:]
+
+    # Calculate support and resistance
+    calculate_support_resistance(df)
+
+    # Add additional columns
+    df['symbol'] = symbol
+    df['interval'] = interval
+    df['percent_return'] = df['close'] / df['open'] - 1
+    df['entry_data'] = None  # This will be a dictionary
+    df['exit_data'] = None   # This will be a dictionary
+    df['partial_close_data'] = None  # This will be a dictionary
+
+    return df
+
 # Calculate support and resistance levels
 def calculate_support_resistance(data, window=15, deviation_threshold=0.005, smoothing_periods=5, volume_factor=1.2):
     """
@@ -86,39 +122,3 @@ def calculate_support_resistance(data, window=15, deviation_threshold=0.005, smo
                     data.at[data.index[i], 'support'] = lows.iloc[i]
     
     return data
- 
-def get_ohlc(symbol, interval, limit=180):
-    # Get the data from Kraken
-    data = kraken_request(symbol, interval)
-
-    # Create DataFrame
-    df = pd.DataFrame(data, columns=['timestamp', 'open', 'high', 'low', 'close', 'vwap', 'volume', 'count'])
-    
-    # Convert data types
-    numeric_columns = ['open', 'high', 'low', 'close', 'vwap', 'volume', 'count']
-    df[numeric_columns] = df[numeric_columns].astype(float)
-    
-    # Convert timestamp to datetime with UTC+3 timezone
-    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s').dt.tz_localize('UTC').dt.tz_convert('Etc/GMT-3')
-    df.set_index('timestamp', inplace=True)
-
-    # If no data is returned, return None
-    if df.empty:
-        return None
-    
-    # Tail the data to get the last limit entries
-    if len(df) > limit:
-        df = df.iloc[-limit:]
-
-    # Calculate support and resistance
-    calculate_support_resistance(df)
-
-    # Add additional columns
-    df['symbol'] = symbol
-    df['interval'] = interval
-    df['percent_return'] = df['close'] / df['open'] - 1
-    df['entry_data'] = None  # This will be a dictionary
-    df['exit_data'] = None   # This will be a dictionary
-    df['partial_close_data'] = None  # This will be a dictionary
-
-    return df
