@@ -4,12 +4,12 @@ import pandas_ta as ta
 
 class MFI_SMA_MACD_10DIFF(Strategy):
     def get_indicators(self):
-        if len(self.data) < 35:
-            return None, None
+        if len(self.data_manager.data) < 35:
+            return None, None, None
         
-        mfi = self.data.ta.mfi(high=self.data['high'], low=self.data['low'], close=self.data['close'], volume=self.data['volume'], length=7, append=True)
-        mfi_sma = self.data.ta.sma(close=self.data['MFI_7'], length=14, append=True, suffix='MFI')
-        macd = self.data.ta.macd(close=self.data['close'], append=True)
+        mfi = self.data_manager.data.ta.mfi(high=self.data_manager.data['high'], low=self.data_manager.data['low'], close=self.data_manager.data['close'], volume=self.data_manager.data['volume'], length=7, append=True)
+        mfi_sma = self.data_manager.data.ta.sma(close=self.data_manager.data['MFI_7'], length=14, append=True, suffix='MFI')
+        macd = self.data_manager.data.ta.macd(close=self.data_manager.data['close'], append=True)
         return mfi, mfi_sma, macd
 
     def check_entry(self):
@@ -22,7 +22,7 @@ class MFI_SMA_MACD_10DIFF(Strategy):
         mfi_sma_current = float(mfi_sma.iloc[-1])
 
         # Check if MFI crosses above its SMA
-        if mfi_current > mfi_sma_current+15 and self.data['MACD_12_26_9'].iloc[-1] > self.data['MACDs_12_26_9'].iloc[-1]:
+        if mfi_current > mfi_sma_current+15 and self.data_manager.data['MACD_12_26_9'].iloc[-1] > self.data_manager.data['MACDs_12_26_9'].iloc[-1]:
             self.logger.debug("MFI crossed above SMA. Entering Long")
             return "long"
         return False

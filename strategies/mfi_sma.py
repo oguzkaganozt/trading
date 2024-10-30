@@ -4,11 +4,11 @@ import pandas_ta as ta
 
 class MFI_SMA(Strategy):    
     def get_indicators(self):
-        if len(self.data) < 35:
+        if len(self.data_manager.data) < 35:
             return None, None
         
-        mfi = self.data.ta.mfi(high=self.data['high'], low=self.data['low'], close=self.data['close'], volume=self.data['volume'], length=7, append=True)
-        mfi_sma = self.data.ta.sma(close=self.data['MFI_7'], length=14, append=True, suffix='MFI')
+        mfi = self.data_manager.data.ta.mfi(high=self.data_manager.data['high'], low=self.data_manager.data['low'], close=self.data_manager.data['close'], volume=self.data_manager.data['volume'], length=7, append=True)
+        mfi_sma = self.data_manager.data.ta.sma(close=self.data_manager.data['MFI_7'], length=14, append=True, suffix='MFI')
         return mfi, mfi_sma
 
     def check_entry(self):
