@@ -4,19 +4,66 @@ import pandas_ta as ta
 
 class MFI_SMA_PARENT_MACD(Strategy):
     def get_indicators(self):
-        if len(self.data_manager.data) < 35:
-            return None, None, None
+        if len(self.data_manager.data) < 35 and len(self.data_manager.data_parent) < 35:
+            return None, None
         
+        # Check if parent data exists and has enough data
+        if self.data_manager.data_parent is None:
+            self.parent_interval_supported = False
+            self.logger.error("Parent data not supported")
+            return None, None
+
         self.parent_interval_supported = True
         mfi = self.data_manager.data.ta.mfi(high=self.data_manager.data['high'], low=self.data_manager.data['low'], close=self.data_manager.data['close'], volume=self.data_manager.data['volume'], length=7, append=True)
         mfi_sma = self.data_manager.data.ta.sma(close=self.data_manager.data['MFI_7'], length=14, append=True, suffix='MFI')
-        # macd_parent = self.data_manager.data_parent.ta.macd(close=self.data_manager.data_parent['close'], append=True)
-        macd_parent = 1
-        return mfi, mfi_sma, macd_parent
+        
+        # Only calculate MACD if we have parent data
+        if self.parent_interval_supported:
+            try:
+                # First, log the raw data
+                self.logger.error("Raw parent data check:")
+                self.logger.error(f"Parent data type: {type(self.data_manager.data_parent)}")
+                self.logger.error(f"Parent data columns: {self.data_manager.data_parent.columns}")
+                self.logger.error(f"First few rows of close prices:")
+                self.logger.error(self.data_manager.data_parent['close'].head())
+                self.logger.error(f"Last few rows of close prices:")
+                self.logger.error(self.data_manager.data_parent['close'].tail())
+                
+                # Now try to process the data
+                parent_df = self.data_manager.data_parent.copy()
+                
+                # Log before numeric conversion
+                self.logger.error("Before numeric conversion:")
+                self.logger.error(parent_df['close'].dtype)
+                self.logger.error(parent_df['close'].isna().sum())
+                
+                parent_close = pd.to_numeric(parent_df['close'], errors='coerce')
+                
+                # Log after numeric conversion
+                self.logger.error("After numeric conversion:")
+                self.logger.error(parent_close.dtype)
+                self.logger.error(parent_close.isna().sum())
+                
+                # Try to calculate MACD with explicit parameters
+                macd_parent = ta.macd(
+                    close=parent_close,
+                    fast=12,
+                    slow=26,
+                    signal=9,
+                    append=True
+                )
+                
+            except Exception as e:
+                self.logger.error(f"Error calculating MACD: {str(e)}")
+                self.logger.error(f"Error type: {type(e)}")
+                import traceback
+                self.logger.error(f"Full traceback: {traceback.format_exc()}")
+    
+        return mfi, mfi_sma
 
     def check_entry(self):
-        mfi, mfi_sma, macd_parent = self.get_indicators()
-        if mfi is None or mfi_sma is None or macd_parent is None:
+        mfi, mfi_sma = self.get_indicators()
+        if mfi is None or mfi_sma is None:
             return False
 
         # Get current and previous values for MFI and MFI SMA
@@ -32,8 +79,8 @@ class MFI_SMA_PARENT_MACD(Strategy):
         return False
 
     def check_exit(self):
-        mfi, mfi_sma, macd = self.get_indicators()
-        if mfi is None or mfi_sma is None or macd is None:
+        mfi, mfi_sma = self.get_indicators()
+        if mfi is None or mfi_sma is None:
             return False
 
         # Get current and previous values for MFI and MFI SMA
