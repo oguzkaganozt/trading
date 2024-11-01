@@ -8,11 +8,13 @@ import json
 from strategies.mfi_sma import MFI_SMA
 from strategies.mfi_sma_macd import MFI_SMA_MACD
 from strategies.mfi_sma_parent_macd import MFI_SMA_PARENT_MACD
+from strategies.macd import MACD
 
 strategy_map = {
     "MFI-SMA": MFI_SMA,
     "MFI-SMA-MACD": MFI_SMA_MACD,
-    "MFI-SMA-PARENT-MACD": MFI_SMA_PARENT_MACD
+    "MFI-SMA-PARENT-MACD": MFI_SMA_PARENT_MACD,
+    "MACD": MACD
 }
 
 def get_coin_pairs():
