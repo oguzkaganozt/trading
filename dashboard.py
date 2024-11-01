@@ -11,10 +11,10 @@ from strategies.mfi_sma_parent_macd import MFI_SMA_PARENT_MACD
 from strategies.macd import MACD
 
 strategy_map = {
-    "MFI-SMA": MFI_SMA,
-    "MFI-SMA-MACD": MFI_SMA_MACD,
-    "MFI-SMA-PARENT-MACD": MFI_SMA_PARENT_MACD,
-    "MACD": MACD
+    "MFI-SMA: Giriş: MFI SMA üzerine çıktığında, Çıkış: MFI SMA altına düştüğünde": MFI_SMA,
+    "MFI-SMA-MACD: Giriş: MFI SMA üzerine çıktığında, Çıkış: MFI SMA altına düştüğünde": MFI_SMA_MACD,
+    "MFI-SMA-PARENT-MACD: Giriş: MACD SMA üzerine çıktığında, Çıkış: MACD SMA altına düştüğünde": MFI_SMA_PARENT_MACD,
+    "MACD: Giriş: MACD SMA üzerine çıktığında, Çıkış: MACD SMA altına düştüğünde": MACD
 }
 
 def get_coin_pairs():

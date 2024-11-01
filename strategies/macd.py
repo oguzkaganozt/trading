@@ -10,7 +10,23 @@ class MACD(Strategy):
         self.parent_interval_supported = False
         ema = self.data_manager.data.ta.ema(close=self.data_manager.data['close'], length=21, append=True, suffix='EMA')
         macd = self.data_manager.data.ta.macd(close=self.data_manager.data['close'], append=True)
-        macd_parent = self.data_manager.data_parent.ta.macd(close=self.data_manager.data_parent['close'], append=True)
+        
+        # Calculate parent MACD
+        macd_parent = self.data_manager.data_parent.ta.macd(close=self.data_manager.data_parent['close'])
+        
+        # Create a new DataFrame with parent MACD data
+        parent_data = pd.DataFrame(index=self.data_manager.data_parent.index)
+        parent_data['MACD_12_26_9_Parent'] = macd_parent['MACD_12_26_9']
+        parent_data['MACDs_12_26_9_Parent'] = macd_parent['MACDs_12_26_9']
+        parent_data['MACDh_12_26_9_Parent'] = macd_parent['MACDh_12_26_9']
+        
+        # Reindex parent data to match base timeframe and forward fill
+        reindexed_parent = parent_data.reindex(self.data_manager.data.index, method='ffill')
+        
+        # Add parent MACD columns to base timeframe data
+        self.data_manager.data['MACD_12_26_9_Parent'] = reindexed_parent['MACD_12_26_9_Parent']
+        self.data_manager.data['MACDs_12_26_9_Parent'] = reindexed_parent['MACDs_12_26_9_Parent']
+        self.data_manager.data['MACDh_12_26_9_Parent'] = reindexed_parent['MACDh_12_26_9_Parent']
 
         return macd, macd_parent
 
@@ -22,9 +38,10 @@ class MACD(Strategy):
         macd_prev = macd.iloc[-2]
         macd_current = macd.iloc[-1]
         macd_parent_current = macd_parent.iloc[-1]
+        macd_parent_prev = macd_parent.iloc[-2]
 
-        # Check if MFI crosses above its SMA
-        if macd_prev['MACD_12_26_9'] < macd_prev['MACDs_12_26_9'] and macd_current['MACD_12_26_9'] > macd_current['MACDs_12_26_9'] and macd_parent_current['MACD_12_26_9'] > macd_parent_current['MACDs_12_26_9']:
+        # Check if MACD crosses above its Signal line
+        if macd_prev['MACD_12_26_9'] < macd_prev['MACDs_12_26_9'] and macd_current['MACD_12_26_9'] > macd_current['MACDs_12_26_9'] and macd_parent_current['MACD_12_26_9'] > macd_parent_current['MACDs_12_26_9'] and macd_parent_prev['MACD_12_26_9'] < macd_parent_prev['MACDs_12_26_9']:
             self.logger.debug("MACD crossed above SMA. Entering Long")
             return "long"
         return False
@@ -37,9 +54,10 @@ class MACD(Strategy):
         macd_prev = macd.iloc[-2]
         macd_current = macd.iloc[-1]
         macd_parent_current = macd_parent.iloc[-1]
+        macd_parent_prev = macd_parent.iloc[-2]
 
-        # Check if MFI crosses below its SMA
-        if macd_parent_current['MACD_12_26_9'] < macd_parent_current['MACDs_12_26_9'] or macd_current['MACD_12_26_9'] < macd_current['MACDs_12_26_9']:
+        # Check if MACD crosses below its Signal line
+        if  macd_parent_prev['MACD_12_26_9'] > macd_parent_prev['MACDs_12_26_9'] and macd_parent_current['MACD_12_26_9'] < macd_parent_current['MACDs_12_26_9']:
             self.logger.debug("MACD crossed below SMA. Exiting Long")
             return True
         return False
