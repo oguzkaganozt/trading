@@ -72,7 +72,7 @@ def draw_graph(df, limit=60, summary=None):
             color = get_next_color(color_palette, color_index)
             color_index = (color_index + 1) % len(color_palette)
             fig.add_trace(go.Scatter(x=df.index, y=df[indicator], 
-                                     name=indicator, line=dict(color=color)), row=3, col=1)
+                                     name=indicator, line=dict(color=color)), row=1, col=1)
             if ma_title_text:
                 ma_title_text += f" | {indicator}"
             else:

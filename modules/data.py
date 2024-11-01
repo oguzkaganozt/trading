@@ -46,8 +46,8 @@ class DataManager:
     
     # Update data
     def update_data(self, limit=180):
-        self._get_data(limit)
-        self._get_parent_data()
+        self._get_data(limit=limit)
+        self._get_parent_data(limit=int(limit/2))
         self._synchronize_data()
 
     # Get latest data
@@ -218,7 +218,7 @@ class DataManager:
             raise
     
     # Get parent data
-    def _get_parent_data(self, limit=50): 
+    def _get_parent_data(self, limit=90): 
         if not self.parent_interval_supported:
             return
         

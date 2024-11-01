@@ -9,12 +9,14 @@ from strategies.mfi_sma import MFI_SMA
 from strategies.mfi_sma_macd import MFI_SMA_MACD
 from strategies.mfi_sma_macd_10diff import MFI_SMA_MACD_10DIFF
 from strategies.mfi_sma_parent_macd import MFI_SMA_PARENT_MACD
+from strategies.mfi_sma_ema_macd import MFI_SMA_EMA_MACD
 
 strategy_map = {
     "MFI-SMA": MFI_SMA,
     "MFI-SMA-MACD": MFI_SMA_MACD,
     "MFI-SMA-MACD-10DIFF": MFI_SMA_MACD_10DIFF,
-    "MFI-SMA-PARENT-MACD": MFI_SMA_PARENT_MACD
+    "MFI-SMA-PARENT-MACD": MFI_SMA_PARENT_MACD,
+    "MFI-SMA-EMA-MACD": MFI_SMA_EMA_MACD
 }
 
 def get_coin_pairs():
