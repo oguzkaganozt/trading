@@ -2,7 +2,11 @@ from modules.strategy import Strategy
 import pandas as pd
 import pandas_ta as ta
 
-class MACD(Strategy):
+class MACD_DOUBLE(Strategy):
+    def __init__(self, symbol, interval, parent_interval=None, balance=1000, risk_percentage=100, trailing_stop_percentage=0):
+        super().__init__(symbol, interval, parent_interval, balance, risk_percentage, trailing_stop_percentage)
+        self.macd_surpassed = False
+
     def get_indicators(self):
         if len(self.data_manager.data) < 35:
             return None, None, None, None
@@ -38,11 +42,15 @@ class MACD(Strategy):
         macd_prev = macd.iloc[-2]
         macd_current = macd.iloc[-1]
         macd_parent_current = macd_parent.iloc[-1]
+        macd_parent_prev = macd_parent.iloc[-2]
 
-        # Check if MACD crosses above its Signal line
-        if macd_current['MACD_12_26_9'] > macd_current['MACDs_12_26_9'] and macd_parent_current['MACD_12_26_9'] > macd_parent_current['MACDs_12_26_9']:
-            self.logger.debug("MACD crossed above SMA. Entering Long")
-            return "long"
+        if self.macd_surpassed:
+            if macd_prev['MACD_12_26_9'] < macd_prev['MACDs_12_26_9'] and macd_current['MACD_12_26_9'] > macd_current['MACDs_12_26_9']:
+                self.logger.debug("Entering Long")
+                return "long"
+        else:
+            if macd_parent_prev['MACD_12_26_9'] < macd_parent_prev['MACDs_12_26_9'] and macd_parent_current['MACD_12_26_9'] > macd_parent_current['MACDs_12_26_9']:
+                self.macd_surpassed = True
         return False
 
     def check_exit(self):
@@ -55,7 +63,8 @@ class MACD(Strategy):
 
         # Check if MACD crosses below its Signal line
         if macd_prev['MACD_12_26_9'] > macd_prev['MACDs_12_26_9'] and macd_current['MACD_12_26_9'] < macd_current['MACDs_12_26_9']:
-            self.logger.debug("MACD crossed below SMA. Exiting Long")
+            self.logger.debug("Exiting Long")
+            self.macd_surpassed = False
             return True
         return False
     

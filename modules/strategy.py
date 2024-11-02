@@ -8,7 +8,7 @@ from modules.data import DataManager
 
 # A base class for all strategies
 class Strategy(ABC):
-    def __init__(self, symbol, interval, balance, parent_interval=None, risk_percentage=10, trailing_stop_percentage=0):
+    def __init__(self, symbol, interval, parent_interval=None, balance=1000, risk_percentage=100, trailing_stop_percentage=0):
         self.name = self.__class__.__name__
         self.symbol = symbol
         self.balance = balance
@@ -149,6 +149,35 @@ class Strategy(ABC):
         from threading import Thread
         thread = Thread(target=run_strategy)
         thread.start()
+    
+    # Run step
+    def run_step(self):
+        try:
+            self.data_manager.update_data()
+            entry_signal = self.check_entry()
+            exit_signal = self.check_exit()
+
+            # # Add entry data to DataFrame
+            # last_index = self.data_manager.data.index[-1]
+            # self.data_manager.data.at[last_index, "entry_data"] = entry_signal
+        except Exception as e:
+            self.logger.error(f"Error during strategy execution: {str(e)}")
+            self.active = False
+            return None
+        
+        if entry_signal is None and exit_signal is None:
+            return None
+
+        result = {}
+        result['name'] = self.name
+        result['symbol'] = self.symbol
+        result['interval'] = self.interval
+        result['entry_signal'] = entry_signal
+        result['exit_signal'] = exit_signal
+        result['last_index'] = self.data_manager.data.index[-1]
+
+        draw_graph(self.data_manager.data, limit=100, summary=result, step_run=True)
+        return result
 
     # Execute trade
     def execute_trade(self, action, size, reason=None):

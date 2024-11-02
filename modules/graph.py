@@ -11,7 +11,7 @@ def get_next_color(color_palette, color_index):
     color_index = color_index + 1
     return color
 
-def draw_graph(df, limit=60, summary=None):
+def draw_graph(df, limit=180, summary=None, step_run=False):
     if df is None or df.empty:
         print("Error: Empty dataframe provided to draw_graph")
         return False
@@ -48,7 +48,7 @@ def draw_graph(df, limit=60, summary=None):
 
     # Add indicators to bottom rows
     for indicator in df.columns:
-        if "RSI" in indicator:
+        if "RSI" in indicator and "Parent" not in indicator:
             color = get_next_color(color_palette, color_index)
             color_index = (color_index + 1) % len(color_palette)
             fig.add_trace(go.Scatter(x=df.index, y=df[indicator], 
@@ -58,7 +58,7 @@ def draw_graph(df, limit=60, summary=None):
             else:
                 rsi_title_text = indicator
             fig.update_yaxes(title_text=rsi_title_text, row=2, col=1)
-        elif "MFI" in indicator:
+        elif "MFI" in indicator and "Parent" not in indicator:
             color = get_next_color(color_palette, color_index)
             color_index = (color_index + 1) % len(color_palette)
             fig.add_trace(go.Scatter(x=df.index, y=df[indicator], 
@@ -107,15 +107,25 @@ def draw_graph(df, limit=60, summary=None):
                           name='Resistance')
 
     # Draw entry points
-    entry_data = df['entry_data'].dropna()
-    fig.add_trace(go.Scatter(
-        x=entry_data.index,
-        y=entry_data.apply(lambda x: x['price']),
-        name="Entry",
-        mode="markers",
-        marker=dict(color="green", size=20, symbol="triangle-up"),
-        hovertext=entry_data.apply(lambda x: f"Entry<br>Price: ${x['price']:.2f}<br>Size: {x['size']:.4f}<br>Amount: ${x['amount']:.2f}")
-    ), row=1, col=1)
+    if not step_run:
+        entry_data = df['entry_data'].dropna()
+        fig.add_trace(go.Scatter(
+            x=entry_data.index,
+            y=entry_data.apply(lambda x: x['price']),
+            name="Entry",
+            mode="markers",
+            marker=dict(color="green", size=20, symbol="triangle-up"),
+            hovertext=entry_data.apply(lambda x: f"Entry<br>Price: ${x['price']:.2f}<br>Size: {x['size']:.4f}<br>Amount: ${x['amount']:.2f}")
+        ), row=1, col=1)
+    else:
+        entry_data = df['entry_data'].dropna()
+        fig.add_trace(go.Scatter(
+            x=entry_data.index,
+            y=entry_data.apply(lambda x: x['price']),
+            name="Entry",
+            mode="markers",
+            marker=dict(color="green", size=20, symbol="triangle-up")
+        ), row=1, col=1)
 
     # Draw exit points
     exit_data = df['exit_data'].dropna()
@@ -140,11 +150,16 @@ def draw_graph(df, limit=60, summary=None):
     ), row=1, col=1)
 
     # Update layout
+    if not step_run:
+        text = f'<b>{summary["name"]} {df["symbol"].iloc[0]} - {df["interval"].iloc[0].upper()} </b> - {summary["win_trades"]} Win / {summary["loss_trades"]} Loss Trades -  Profit Factor: {summary["profit_factor"]:.2f} - Total Gain/Loss: {summary["total_profit_loss_percentage"]:.2f}%'
+    else:
+        text = f'<b>{summary["name"]} {summary["symbol"]} {summary["interval"]} </b>'
+
     fig.update_layout(
         xaxis_rangeslider_visible=False,
         height=1000, 
         title=dict(
-            text=f'<b>{summary["name"]} {df["symbol"].iloc[0]} - {df["interval"].iloc[0].upper()} </b> - {summary["win_trades"]} Win / {summary["loss_trades"]} Loss Trades -  Profit Factor: {summary["profit_factor"]:.2f} - Total Gain/Loss: {summary["total_profit_loss_percentage"]:.2f}%',
+            text=text,
             font=dict(size=18)
         ),
         template="plotly_white",
@@ -164,6 +179,7 @@ def draw_graph(df, limit=60, summary=None):
         file_name = f"{summary['name']}-{summary['symbol']}-{summary['interval']}.html"
         fig.write_html(f"graphs/{file_name}")
         summary["graph_url"] = f"graphs/{file_name}"
+        print(f"Graph saved to {summary['graph_url']}")
     except Exception as e1:
         print(f"Error saving graph to HTML file: {e1}")
 

@@ -9,12 +9,16 @@ from strategies.mfi_sma import MFI_SMA
 from strategies.mfi_sma_macd import MFI_SMA_MACD
 from strategies.mfi_sma_parent_macd import MFI_SMA_PARENT_MACD
 from strategies.macd import MACD
+from strategies.macd_double import MACD_DOUBLE
+from strategies.stoch_rsi import STOCH_RSI
 
 strategy_map = {
     "MFI-SMA: Giriş: MFI SMA üzerine çıktığında, Çıkış: MFI SMA altına düştüğünde": MFI_SMA,
-    "MFI-SMA-MACD: Giriş: MFI SMA üzerine çıktığında, Çıkış: MFI SMA altına düştüğünde": MFI_SMA_MACD,
-    "MFI-SMA-PARENT-MACD: Giriş: MACD SMA üzerine çıktığında, Çıkış: MACD SMA altına düştüğünde": MFI_SMA_PARENT_MACD,
-    "MACD: Giriş: MACD SMA üzerine çıktığında, Çıkış: MACD SMA altına düştüğünde": MACD
+    "MFI-SMA-MACD: Giriş: MACD pozitif alanda, MFI SMA üzerine çıktığında, Çıkış: MFI SMA altına düştüğünde": MFI_SMA_MACD,
+    "MFI-SMA-PARENT-MACD: Giriş: Büyük zaman diliminde MACD pozitif alanda, MFI SMA üzerine çıktığında, Çıkış: MFI SMA altına düştüğünde": MFI_SMA_PARENT_MACD,
+    "MACD: Giriş: Büyük zaman diliminde MACD pozitif alanda, küçük zamanda MACD pozitif kestiğinde. Çıkış: Küçük zaman diliminde MACD negatif kestiğinde": MACD,
+    "MACD-DOUBLE: Giriş: Büyük zaman diliminde MACD pozitif kestiğinde, küçük zamanda MACD pozitif kestiğinde. Çıkış: Küçük zaman diliminde MACD negatif kestiğinde": MACD_DOUBLE,
+    "STOCH-RSI: Giriş: Büyük zaman diliminde STOCH-RSI pozitif alanda, küçük zamanda STOCH-RSI pozitif kestiğinde. Çıkış: Küçük zaman diliminde STOCH-RSI negatif kestiğinde": STOCH_RSI
 }
 
 def get_coin_pairs():
@@ -31,11 +35,17 @@ def run_backtest(args):
     strategy, duration = args
     return strategy.backtest(duration)
 
+def run_step(args):
+    strategy = args
+    return strategy.run_step()
+
 def show_dashboard():
     st.sidebar.title("Menu")
-    dashboard_type = st.sidebar.selectbox("Select Dashboard", ["Backtesting", "Live Simulation", "Live Trading"], index=0)
+    dashboard_type = st.sidebar.selectbox("Select Dashboard", ["Tarama", "Backtesting", "Live Simulation", "Live Trading"], index=0)
 
-    if dashboard_type == "Backtesting":
+    if dashboard_type == "Tarama":
+        show_scanning_dashboard()
+    elif dashboard_type == "Backtesting":
         show_backtesting_dashboard()
     elif dashboard_type == "Live Trading":
         show_live_trading_dashboard()
@@ -46,8 +56,117 @@ def show_live_trading_dashboard():
     st.title("Live Trading")
     pass
 
+def show_scanning_dashboard():
+    # Add custom CSS to left-align content
+    st.markdown("""
+        <style>
+        .block-container {
+            padding-left: 2rem;
+            padding-right: 2rem;
+            max-width: 85%;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    st.title("Tarama")
+
+    # Strategy selection
+    strategies = list(strategy_map.keys())
+    strategy = st.selectbox(
+        "Select Trading Strategy",
+        strategies
+    )
+    
+    # Get strategy class immediately after selection
+    strategy_class = get_strategy_class(strategy)
+    if not strategy_class:
+        st.error(f"Strategy {strategy} not implemented")
+        return None
+    
+    # Timeframe selection
+    interval = st.select_slider(
+        "Küçük Zaman Dilimi",
+        options=["30m", "1h", "4h", "1d", "1w"],
+        value="4h"
+    )
+
+    # Parent interval selection
+    parent_interval = st.select_slider(
+        "Büyük Zaman Dilimi",
+        options=["1h", "4h", "1d", "1w", "15d"],
+        value="1d"
+    )
+
+    # Start button
+    if st.button("Başlat"):
+        # Clear and recreate graphs folder
+        if os.path.exists("graphs"):
+            for file in os.listdir("graphs"):
+                os.remove(os.path.join("graphs", file))
+        os.makedirs("graphs", exist_ok=True)
+        
+        # Create strategy instances based on configuration
+        strategies = []
+        for coin in coin_pairs:
+            # Convert from "BTC/USDT" format to "BTCUSD" format
+            symbol = coin.split('/')[0] + "USD"
+            strategy_instance = strategy_class(
+                symbol=symbol,
+                interval=interval,
+                parent_interval=parent_interval
+            )
+            strategies.append(strategy_instance)
+        
+        # Run live simulation for each strategy
+        for strategy in strategies:
+            strategy.put_live_simulation()
+        
+        # Run step run in parallel
+        with st.status("Tarama yapılıyor...") as status:
+            with Pool() as pool:
+                run_args = [(strategy) for strategy in strategies]
+                results = []
+                
+                try:
+                    for i, result in enumerate(pool.imap(run_step, run_args)):
+                        if result is not None:  # Add null check
+                            results.append(result)
+                            st.write(f"Tamamlandı {result['name']} {result['symbol']} {result['interval']}")
+                        else:
+                            st.warning(f"Sonuç yok {strategies[i].symbol}")
+                        status.update(label=f"Tarama {i + 1}/{len(strategies)}")
+                    
+                    status.update(label="Tamamlandı!", state="complete")
+                except Exception as e:
+                    status.update(label=f"Error: {str(e)}", state="error")
+                    st.error(f"An error occurred during scanning: {str(e)}")
+        
+        for result in results:
+            if result is None:
+                continue
+            entry_signal = result['entry_signal']
+            exit_signal = result['exit_signal']
+            if entry_signal:
+                st.write(f"{result['last_index']} {result['name']} {result['symbol']} {result['interval']} Entry Signal: {entry_signal}")
+            # if exit_signal:
+            #     st.write(f"{result['last_index']} {result['name']} {result['symbol']} {result['interval']} Exit Signal: {exit_signal}")
+
+        # Create tabs for each result
+        if results:            
+            tabs = st.tabs([f"Result for {result['symbol']} {result['interval']}" for result in results])
+            
+            for tab, result in zip(tabs, results):
+                with tab:
+                    with open("./"+result["graph_url"],'r') as f: 
+                        html_data = f.read()
+
+                        # Show in webpage
+                        st.components.v1.html(html_data, scrolling=True, width=1400, height=1000)
+        
+        return results
+
 def show_live_simulation_dashboard():
-        # Add custom CSS to left-align content
+    # Add custom CSS to left-align content
     st.markdown("""
         <style>
         .block-container {
@@ -137,7 +256,7 @@ def show_live_simulation_dashboard():
             # Convert from "BTC/USDT" format to "BTCUSD" format
             symbol = coin.split('/')[0] + "USD"
             strategy_instance = strategy_class(
-                symbol=symbol,
+                symbol=coin,
                 interval=interval,
                 parent_interval=parent_interval,
                 balance=balance,
