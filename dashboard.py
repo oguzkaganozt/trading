@@ -19,7 +19,7 @@ strategy_map = {
     "MFI-MACD: Giriş: MACD pozitif alanda, MFI SMA üzerine çıktığında, Çıkış: MFI SMA altına düştüğünde": MFI_MACD,
     "MACD: Giriş: Büyük zaman diliminde MACD pozitif alanda, küçük zamanda MACD pozitif kestiğinde. Çıkış: Küçük zaman diliminde MACD negatif kestiğinde": MACD,
     "STOCH-RSI: Giriş: STOCH-RSI pozitif kestiğinde. Çıkış: STOCH-RSI negatif kestiğinde": STOCH_RSI,
-    "STOCH-RSI-DOUBLE: Giriş: Büyük zaman diliminde STOCH-RSI pozitif alanda, küçük zamanda STOCH-RSI pozitif alanda. Çıkış: Küçük zaman diliminde STOCH-RSI negatif alanda": STOCH_RSI_DOUBLE
+    "STOCH-RSI-DOUBLE: Giriş: Büyük ve küçük zaman diliminde STOCH-RSI pozitif alanda. Çıkış: Küçük zaman diliminde STOCH-RSI negatif alanda": STOCH_RSI_DOUBLE
 }
 
 def get_coin_pairs():
