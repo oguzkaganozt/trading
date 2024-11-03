@@ -58,6 +58,12 @@ def show_live_trading_dashboard():
     pass
 
 def show_scanning_dashboard():
+    # Initialize session state for results and signals if not exists
+    if 'scan_results' not in st.session_state:
+        st.session_state.scan_results = None
+    if 'signal_messages' not in st.session_state:
+        st.session_state.signal_messages = []
+
     # Add custom CSS to left-align content
     st.markdown("""
         <style>
@@ -100,6 +106,9 @@ def show_scanning_dashboard():
 
     # Start button
     if st.button("Başlat"):
+        # Clear previous signals when starting new scan
+        st.session_state.signal_messages = []
+        
         # Clear and recreate graphs folder
         if os.path.exists("graphs"):
             for file in os.listdir("graphs"):
@@ -149,26 +158,40 @@ def show_scanning_dashboard():
                 continue
             entry_signal = result['entry_signal']
             exit_signal = result['exit_signal']
-            if entry_signal == "long":
-                st.markdown(f"<span style='color: green'>{result['last_index']} {result['name']} {result['symbol']} {result['interval']} Entry Signal: {entry_signal}</span>", unsafe_allow_html=True)
-            elif entry_signal == "short":
-                st.markdown(f"<span style='color: red'>{result['last_index']} {result['name']} {result['symbol']} {result['interval']} Entry Signal: {entry_signal}</span>", unsafe_allow_html=True)
-            # if exit_signal:
-            #     st.write(f"{result['last_index']} {result['name']} {result['symbol']} {result['interval']} Exit Signal: {exit_signal}")
-
-        # Create tabs for each result
-        if results:            
-            tabs = st.tabs([f"Result for {result['symbol']} {result['interval']}" for result in results])
             
-            for tab, result in zip(tabs, results):
-                with tab:
-                    with open("./"+result["graph_url"],'r') as f: 
-                        html_data = f.read()
+            # Store signals in session state instead of displaying directly
+            if entry_signal == "long":
+                message = f"<span style='color: green'>{result['last_index']} {result['name']} {result['symbol']} {result['interval']} Entry Signal: {entry_signal}</span>"
+                st.session_state.signal_messages.append(message)
+            elif entry_signal == "short":
+                message = f"<span style='color: red'>{result['last_index']} {result['name']} {result['symbol']} {result['interval']} Entry Signal: {entry_signal}</span>"
+                st.session_state.signal_messages.append(message)
 
-                        # Show in webpage
-                        st.components.v1.html(html_data, scrolling=True, width=1400, height=1000)
+        # Store results in session state
+        st.session_state.scan_results = results
+
+    # Display stored signals (this will persist when changing dropdown)
+    for message in st.session_state.signal_messages:
+        st.markdown(message, unsafe_allow_html=True)
+
+    # Move graph display outside the button click condition
+    if st.session_state.scan_results:
+        selected_result = st.selectbox(
+            "Select Graph",
+            options=[f"{result['symbol']} {result['interval']}" for result in st.session_state.scan_results],
+            format_func=lambda x: f"Graph for {x}"
+        )
         
-        return results
+        # Find the selected result
+        selected_idx = [f"{result['symbol']} {result['interval']}" for result in st.session_state.scan_results].index(selected_result)
+        result = st.session_state.scan_results[selected_idx]
+        
+        # Display the selected graph
+        with open("./" + result["graph_url"], 'r') as f:
+            html_data = f.read()
+        st.components.v1.html(html_data, scrolling=True, width=1400, height=1000)
+        
+        return st.session_state.scan_results
 
 def show_live_simulation_dashboard():
     # Add custom CSS to left-align content
@@ -408,38 +431,23 @@ def show_backtesting_dashboard():
                     status.update(label=f"Error: {str(e)}", state="error")
                     st.error(f"An error occurred during backtesting: {str(e)}")
         
-        # Write combined results
-        total_win_trades = sum(result["win_trades"] for result in results)
-        total_loss_trades = sum(result["loss_trades"] for result in results)
-        
-        # Handle case where there are no trades
-        if total_win_trades == 0 and total_loss_trades == 0:
-            win_rate = 0
-            average_profit_factor = 0
-            average_profit_loss_percentage = 0
-            st.warning("No trades were executed during the backtest period")
-        else:
-            win_rate = total_win_trades * 100 / (total_win_trades + total_loss_trades)
-            average_profit_factor = sum(result["profit_factor"] for result in results) / len(results)
-            average_profit_loss_percentage = sum(result["total_profit_loss_percentage"] for result in results) / len(results)
-        
-        st.write(f"Win Rate: {win_rate:.2f}%")
-        st.write(f"Average Profit Factor: {average_profit_factor:.2f}")
-        st.write(f"Average Percentage Gain: {average_profit_loss_percentage:.2f}%")
-
-        # Create tabs for each result
-        if results:            
-            tabs = st.tabs([f"Result for {result['symbol']} {result['interval']}" for result in results])
+        # Replace tabs with dropdown for graph selection
+        if results:
+            selected_result = st.selectbox(
+                "Select Graph",
+                options=[f"{result['symbol']} {result['interval']}" for result in results],
+                format_func=lambda x: f"Graph for {x}"
+            )
             
-            for tab, result in zip(tabs, results):
-                with tab:
-                    with open("./"+result["graph_url"],'r') as f: 
-                        html_data = f.read()
-
-                    # Show in webpage
-                    st.components.v1.html(html_data, scrolling=True, width=1400, height=1000)
+            # Find the selected result
+            selected_idx = [f"{result['symbol']} {result['interval']}" for result in results].index(selected_result)
+            result = results[selected_idx]
+            
+            # Display the selected graph
+            with open("./" + result["graph_url"], 'r') as f:
+                html_data = f.read()
+            st.components.v1.html(html_data, scrolling=True, width=1400, height=1000)
         
-        # Return configuration and results
         return results
     
     return None
