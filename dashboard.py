@@ -5,19 +5,19 @@ import pandas as pd
 from multiprocessing import Pool
 import os
 import json
-from strategies.mfi_sma import MFI_SMA
-from strategies.mfi_sma_macd import MFI_SMA_MACD
-from strategies.mfi_sma_parent_macd import MFI_SMA_PARENT_MACD
+from strategies.mfi import MFI
+from strategies.rsi import RSI
+from strategies.mfi_macd import MFI_MACD
 from strategies.macd import MACD
-from strategies.macd_double import MACD_DOUBLE
 from strategies.stoch_rsi import STOCH_RSI
 
+import pandas_ta as ta
+
 strategy_map = {
-    "MFI-SMA: Giriş: MFI SMA üzerine çıktığında, Çıkış: MFI SMA altına düştüğünde": MFI_SMA,
-    "MFI-SMA-MACD: Giriş: MACD pozitif alanda, MFI SMA üzerine çıktığında, Çıkış: MFI SMA altına düştüğünde": MFI_SMA_MACD,
-    "MFI-SMA-PARENT-MACD: Giriş: Büyük zaman diliminde MACD pozitif alanda, MFI SMA üzerine çıktığında, Çıkış: MFI SMA altına düştüğünde": MFI_SMA_PARENT_MACD,
+    "RSI: Giriş: RSI SMA üzerine çıktığında, Çıkış: RSI SMA altına düştüğünde": RSI,
+    "MFI: Giriş: MFI SMA üzerine çıktığında, Çıkış: MFI SMA altına düştüğünde": MFI,
+    "MFI-MACD: Giriş: MACD pozitif alanda, MFI SMA üzerine çıktığında, Çıkış: MFI SMA altına düştüğünde": MFI_MACD,
     "MACD: Giriş: Büyük zaman diliminde MACD pozitif alanda, küçük zamanda MACD pozitif kestiğinde. Çıkış: Küçük zaman diliminde MACD negatif kestiğinde": MACD,
-    "MACD-DOUBLE: Giriş: Büyük zaman diliminde MACD pozitif kestiğinde, küçük zamanda MACD pozitif kestiğinde. Çıkış: Küçük zaman diliminde MACD negatif kestiğinde": MACD_DOUBLE,
     "STOCH-RSI: Giriş: Büyük zaman diliminde STOCH-RSI pozitif alanda, küçük zamanda STOCH-RSI pozitif kestiğinde. Çıkış: Küçük zaman diliminde STOCH-RSI negatif kestiğinde": STOCH_RSI
 }
 
@@ -140,9 +140,13 @@ def show_scanning_dashboard():
                 except Exception as e:
                     status.update(label=f"Error: {str(e)}", state="error")
                     st.error(f"An error occurred during scanning: {str(e)}")
+
+        st.write(len(results))
         
         for result in results:
             if result is None:
+                # Drop result
+                results.remove(result)
                 continue
             entry_signal = result['entry_signal']
             exit_signal = result['exit_signal']
@@ -150,6 +154,8 @@ def show_scanning_dashboard():
                 st.write(f"{result['last_index']} {result['name']} {result['symbol']} {result['interval']} Entry Signal: {entry_signal}")
             # if exit_signal:
             #     st.write(f"{result['last_index']} {result['name']} {result['symbol']} {result['interval']} Exit Signal: {exit_signal}")
+        
+        st.write(len(results))
 
         # Create tabs for each result
         if results:            

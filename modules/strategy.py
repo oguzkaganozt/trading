@@ -156,16 +156,12 @@ class Strategy(ABC):
             self.data_manager.update_data()
             entry_signal = self.check_entry()
             exit_signal = self.check_exit()
-
-            # # Add entry data to DataFrame
-            # last_index = self.data_manager.data.index[-1]
-            # self.data_manager.data.at[last_index, "entry_data"] = entry_signal
         except Exception as e:
             self.logger.error(f"Error during strategy execution: {str(e)}")
             self.active = False
             return None
         
-        if entry_signal is None and exit_signal is None:
+        if entry_signal is False:
             return None
 
         result = {}

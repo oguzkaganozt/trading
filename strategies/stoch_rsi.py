@@ -10,7 +10,7 @@ class STOCH_RSI(Strategy):
         self.parent_interval_supported = False
         ema = self.data_manager.data.ta.ema(close=self.data_manager.data['close'], length=21, append=True, suffix='EMA')
         stoch_rsi = self.data_manager.data.ta.stochrsi(close=self.data_manager.data['close'], append=True)
-        stoch_rsi_parent = self.data_manager.data_parent.ta.stochrsi(close=self.data_manager.data_parent['close'])
+        stoch_rsi_parent = self.data_manager.data_parent.ta.stochrsi(close=self.data_manager.data_parent['close'], append=True)
 
         # self.logger.info(stoch_rsi)
         # self.logger.info(stoch_rsi_parent)

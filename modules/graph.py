@@ -21,6 +21,7 @@ def draw_graph(df, limit=180, summary=None, step_run=False):
     mfi_title_text = ""
     ma_title_text = ""
     macd_title_text = ""
+    stochrsi_title_text = ""
 
     # Limit the dataframe to the last 'limit' rows
     df = df.tail(limit)
@@ -58,6 +59,15 @@ def draw_graph(df, limit=180, summary=None, step_run=False):
             else:
                 rsi_title_text = indicator
             fig.update_yaxes(title_text=rsi_title_text, row=2, col=1)
+        elif "STOCHRSI" in indicator:
+            color = get_next_color(color_palette, color_index)
+            fig.add_trace(go.Scatter(x=df.index, y=df[indicator], 
+                                     name=indicator, line=dict(color=color)), row=2, col=1)
+            if stochrsi_title_text:
+                stochrsi_title_text += f" | {indicator}"
+            else:
+                stochrsi_title_text = indicator
+            fig.update_yaxes(title_text=stochrsi_title_text, row=2, col=1)
         elif "MFI" in indicator and "Parent" not in indicator:
             color = get_next_color(color_palette, color_index)
             color_index = (color_index + 1) % len(color_palette)
@@ -107,25 +117,15 @@ def draw_graph(df, limit=180, summary=None, step_run=False):
                           name='Resistance')
 
     # Draw entry points
-    if not step_run:
-        entry_data = df['entry_data'].dropna()
-        fig.add_trace(go.Scatter(
-            x=entry_data.index,
-            y=entry_data.apply(lambda x: x['price']),
-            name="Entry",
-            mode="markers",
-            marker=dict(color="green", size=20, symbol="triangle-up"),
-            hovertext=entry_data.apply(lambda x: f"Entry<br>Price: ${x['price']:.2f}<br>Size: {x['size']:.4f}<br>Amount: ${x['amount']:.2f}")
-        ), row=1, col=1)
-    else:
-        entry_data = df['entry_data'].dropna()
-        fig.add_trace(go.Scatter(
-            x=entry_data.index,
-            y=entry_data.apply(lambda x: x['price']),
-            name="Entry",
-            mode="markers",
-            marker=dict(color="green", size=20, symbol="triangle-up")
-        ), row=1, col=1)
+    entry_data = df['entry_data'].dropna()
+    fig.add_trace(go.Scatter(
+        x=entry_data.index,
+        y=entry_data.apply(lambda x: x['price']),
+        name="Entry",
+        mode="markers",
+        marker=dict(color="green", size=20, symbol="triangle-up"),
+        hovertext=entry_data.apply(lambda x: f"Entry<br>Price: ${x['price']:.2f}<br>Size: {x['size']:.4f}<br>Amount: ${x['amount']:.2f}")
+    ), row=1, col=1)
 
     # Draw exit points
     exit_data = df['exit_data'].dropna()
