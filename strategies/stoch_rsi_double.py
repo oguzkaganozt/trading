@@ -43,6 +43,9 @@ class STOCH_RSI_DOUBLE(Strategy):
         if stoch_rsi_current['STOCHRSIk_14_14_3_3'] > stoch_rsi_current['STOCHRSId_14_14_3_3'] and stoch_rsi_parent_current['STOCHRSIk_14_14_3_3'] > stoch_rsi_parent_current['STOCHRSId_14_14_3_3']:
             self.logger.debug("STOCH-RSI crossed above SMA. Entering Long")
             return "long"
+        elif stoch_rsi_current['STOCHRSIk_14_14_3_3'] < stoch_rsi_current['STOCHRSId_14_14_3_3'] and stoch_rsi_parent_current['STOCHRSIk_14_14_3_3'] < stoch_rsi_parent_current['STOCHRSId_14_14_3_3']:
+            self.logger.debug("STOCH-RSI crossed below SMA. Entering Short")
+            return "short"
         return False
 
     def check_exit(self):
