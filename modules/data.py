@@ -126,9 +126,6 @@ class DataManager:
         if data is None:
             return None
         
-        # Omit last row
-        data = data[:-1]
-
         # Create DataFrame
         df = pd.DataFrame(data, columns=['timestamp', 'open', 'high', 'low', 'close', 'vwap', 'volume', 'count'])
         
