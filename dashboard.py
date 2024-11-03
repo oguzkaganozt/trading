@@ -149,8 +149,10 @@ def show_scanning_dashboard():
                 continue
             entry_signal = result['entry_signal']
             exit_signal = result['exit_signal']
-            if entry_signal:
-                st.write(f"{result['last_index']} {result['name']} {result['symbol']} {result['interval']} Entry Signal: {entry_signal}")
+            if entry_signal == "long":
+                st.markdown(f"<span style='color: green'>{result['last_index']} {result['name']} {result['symbol']} {result['interval']} Entry Signal: {entry_signal}</span>", unsafe_allow_html=True)
+            elif entry_signal == "short":
+                st.markdown(f"<span style='color: red'>{result['last_index']} {result['name']} {result['symbol']} {result['interval']} Entry Signal: {entry_signal}</span>", unsafe_allow_html=True)
             # if exit_signal:
             #     st.write(f"{result['last_index']} {result['name']} {result['symbol']} {result['interval']} Exit Signal: {exit_signal}")
 
