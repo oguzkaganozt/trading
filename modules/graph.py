@@ -26,6 +26,9 @@ def draw_graph(df, limit=180, summary=None, step_run=False):
     # Limit the dataframe to the last 'limit' rows
     df = df.tail(limit)
 
+    # Drop last row
+    df = df.iloc[:-1]
+
     # Create subplot with 3 rows
     fig = make_subplots(rows=3, cols=1, shared_xaxes=True, 
                         vertical_spacing=0.02, row_heights=[0.6, 0.2, 0.2])
