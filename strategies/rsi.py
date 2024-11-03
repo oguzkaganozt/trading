@@ -18,10 +18,10 @@ class RSI(Strategy):
             return False
 
         # Get current and previous values for RSI and RSI SMA
-        rsi_current = float(rsi.iloc[-1])
-        rsi_prev = float(rsi.iloc[-2])
-        rsi_sma_current = float(rsi_sma.iloc[-1])
-        rsi_sma_prev = float(rsi_sma.iloc[-2])
+        rsi_current = float(rsi.iloc[-2])
+        rsi_prev = float(rsi.iloc[-3])
+        rsi_sma_current = float(rsi_sma.iloc[-2])
+        rsi_sma_prev = float(rsi_sma.iloc[-3])
   
         # Check if RSI crosses above its SMA
         if rsi_prev <= rsi_sma_prev and rsi_current > rsi_sma_current:
@@ -40,10 +40,10 @@ class RSI(Strategy):
             return False
 
         # Get current and previous values for RSI and RSI SMA
-        rsi_current = float(rsi.iloc[-1])
-        rsi_prev = float(rsi.iloc[-2])
-        rsi_sma_current = float(rsi_sma.iloc[-1])
-        rsi_sma_prev = float(rsi_sma.iloc[-2])
+        rsi_current = float(rsi.iloc[-2])
+        rsi_prev = float(rsi.iloc[-3])
+        rsi_sma_current = float(rsi_sma.iloc[-2])
+        rsi_sma_prev = float(rsi_sma.iloc[-3])
 
         # Check if RSI crosses below its SMA
         if rsi_prev >= rsi_sma_prev and rsi_current < rsi_sma_current:

@@ -35,9 +35,9 @@ class MACD(Strategy):
         if macd is None or macd_parent is None:
             return False
 
-        macd_prev = macd.iloc[-2]
-        macd_current = macd.iloc[-1]
-        macd_parent_current = macd_parent.iloc[-1]
+        macd_prev = macd.iloc[-3]
+        macd_current = macd.iloc[-2]
+        macd_parent_current = macd_parent.iloc[-2]
 
         # Check if MACD crosses above its Signal line
         if macd_current['MACD_12_26_9'] > macd_current['MACDs_12_26_9'] and macd_parent_current['MACD_12_26_9'] > macd_parent_current['MACDs_12_26_9']:
@@ -50,8 +50,8 @@ class MACD(Strategy):
         if macd is None or macd_parent is None:
             return False
         
-        macd_prev = macd.iloc[-2]
-        macd_current = macd.iloc[-1]
+        macd_prev = macd.iloc[-3]
+        macd_current = macd.iloc[-2]
 
         # Check if MACD crosses below its Signal line
         if macd_prev['MACD_12_26_9'] > macd_prev['MACDs_12_26_9'] and macd_current['MACD_12_26_9'] < macd_current['MACDs_12_26_9']:

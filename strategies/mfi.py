@@ -18,10 +18,10 @@ class MFI(Strategy):
             return False
 
         # Get current and previous values for MFI and MFI SMA
-        mfi_current = float(mfi.iloc[-1])
-        mfi_prev = float(mfi.iloc[-2])
-        mfi_sma_current = float(mfi_sma.iloc[-1])
-        mfi_sma_prev = float(mfi_sma.iloc[-2])
+        mfi_current = float(mfi.iloc[-2])
+        mfi_prev = float(mfi.iloc[-3])
+        mfi_sma_current = float(mfi_sma.iloc[-2])
+        mfi_sma_prev = float(mfi_sma.iloc[-3])
   
         # Check if MFI crosses above its SMA
         if mfi_prev <= mfi_sma_prev and mfi_current > mfi_sma_current:
@@ -40,10 +40,10 @@ class MFI(Strategy):
             return False
 
         # Get current and previous values for MFI and MFI SMA
-        mfi_current = float(mfi.iloc[-1])
-        mfi_prev = float(mfi.iloc[-2])
-        mfi_sma_current = float(mfi_sma.iloc[-1])
-        mfi_sma_prev = float(mfi_sma.iloc[-2])
+        mfi_current = float(mfi.iloc[-2])
+        mfi_prev = float(mfi.iloc[-3])
+        mfi_sma_current = float(mfi_sma.iloc[-2])
+        mfi_sma_prev = float(mfi_sma.iloc[-3])
 
         # Check if MFI crosses below its SMA
         if mfi_prev >= mfi_sma_prev and mfi_current < mfi_sma_current:

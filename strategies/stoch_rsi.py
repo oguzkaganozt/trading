@@ -36,8 +36,8 @@ class STOCH_RSI(Strategy):
         if stoch_rsi is None or stoch_rsi_parent is None:
             return False
 
-        stoch_rsi_current = stoch_rsi.iloc[-1]
-        stoch_rsi_prev = stoch_rsi.iloc[-2]
+        stoch_rsi_current = stoch_rsi.iloc[-2]
+        stoch_rsi_prev = stoch_rsi.iloc[-3]
 
         if stoch_rsi_prev['STOCHRSIk_14_14_3_3'] <= stoch_rsi_prev['STOCHRSId_14_14_3_3'] and stoch_rsi_current['STOCHRSIk_14_14_3_3'] > stoch_rsi_current['STOCHRSId_14_14_3_3']:
             self.logger.debug("STOCH-RSI crossed above SMA. Entering Long")
@@ -50,7 +50,7 @@ class STOCH_RSI(Strategy):
             return False
         
         stoch_rsi_prev = stoch_rsi.iloc[-2]
-        stoch_rsi_current = stoch_rsi.iloc[-1]
+        stoch_rsi_current = stoch_rsi.iloc[-3]
 
         # Check if MACD crosses below its Signal line
         if stoch_rsi_prev['STOCHRSIk_14_14_3_3'] > stoch_rsi_prev['STOCHRSId_14_14_3_3'] and stoch_rsi_current['STOCHRSIk_14_14_3_3'] <= stoch_rsi_current['STOCHRSId_14_14_3_3']:
