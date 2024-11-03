@@ -2,7 +2,7 @@ from modules.strategy import Strategy
 import pandas as pd
 import pandas_ta as ta
 
-class STOCH_RSI(Strategy):
+class STOCH_RSI_DOUBLE(Strategy):
     def get_indicators(self):
         if len(self.data_manager.data) < 35:
             return None, None, None, None
@@ -37,9 +37,10 @@ class STOCH_RSI(Strategy):
             return False
 
         stoch_rsi_current = stoch_rsi.iloc[-1]
-        stoch_rsi_prev = stoch_rsi.iloc[-2]
+        stoch_rsi_parent_current = stoch_rsi_parent.iloc[-1]
 
-        if stoch_rsi_prev['STOCHRSIk_14_14_3_3'] <= stoch_rsi_prev['STOCHRSId_14_14_3_3'] and stoch_rsi_current['STOCHRSIk_14_14_3_3'] > stoch_rsi_current['STOCHRSId_14_14_3_3']:
+        # Check if MACD crosses above its Signal line
+        if stoch_rsi_current['STOCHRSIk_14_14_3_3'] > stoch_rsi_current['STOCHRSId_14_14_3_3'] and stoch_rsi_parent_current['STOCHRSIk_14_14_3_3'] > stoch_rsi_parent_current['STOCHRSId_14_14_3_3']:
             self.logger.debug("STOCH-RSI crossed above SMA. Entering Long")
             return "long"
         return False
@@ -53,7 +54,7 @@ class STOCH_RSI(Strategy):
         stoch_rsi_current = stoch_rsi.iloc[-1]
 
         # Check if MACD crosses below its Signal line
-        if stoch_rsi_prev['STOCHRSIk_14_14_3_3'] > stoch_rsi_prev['STOCHRSId_14_14_3_3'] and stoch_rsi_current['STOCHRSIk_14_14_3_3'] <= stoch_rsi_current['STOCHRSId_14_14_3_3']:
+        if stoch_rsi_prev['STOCHRSIk_14_14_3_3'] > stoch_rsi_prev['STOCHRSId_14_14_3_3'] and stoch_rsi_current['STOCHRSIk_14_14_3_3'] < stoch_rsi_current['STOCHRSId_14_14_3_3']:
             self.logger.debug("STOCH-RSI crossed below SMA. Exiting Long")
             return True
         return False

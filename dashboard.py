@@ -10,7 +10,7 @@ from strategies.rsi import RSI
 from strategies.mfi_macd import MFI_MACD
 from strategies.macd import MACD
 from strategies.stoch_rsi import STOCH_RSI
-
+from strategies.stoch_rsi_double import STOCH_RSI_DOUBLE
 import pandas_ta as ta
 
 strategy_map = {
@@ -18,7 +18,8 @@ strategy_map = {
     "MFI: Giriş: MFI SMA üzerine çıktığında, Çıkış: MFI SMA altına düştüğünde": MFI,
     "MFI-MACD: Giriş: MACD pozitif alanda, MFI SMA üzerine çıktığında, Çıkış: MFI SMA altına düştüğünde": MFI_MACD,
     "MACD: Giriş: Büyük zaman diliminde MACD pozitif alanda, küçük zamanda MACD pozitif kestiğinde. Çıkış: Küçük zaman diliminde MACD negatif kestiğinde": MACD,
-    "STOCH-RSI: Giriş: Büyük zaman diliminde STOCH-RSI pozitif alanda, küçük zamanda STOCH-RSI pozitif kestiğinde. Çıkış: Küçük zaman diliminde STOCH-RSI negatif kestiğinde": STOCH_RSI
+    "STOCH-RSI: Giriş: STOCH-RSI pozitif kestiğinde. Çıkış: STOCH-RSI negatif kestiğinde": STOCH_RSI,
+    "STOCH-RSI-DOUBLE: Giriş: Büyük zaman diliminde STOCH-RSI pozitif alanda, küçük zamanda STOCH-RSI pozitif alanda. Çıkış: Küçük zaman diliminde STOCH-RSI negatif alanda": STOCH_RSI_DOUBLE
 }
 
 def get_coin_pairs():
@@ -140,8 +141,6 @@ def show_scanning_dashboard():
                 except Exception as e:
                     status.update(label=f"Error: {str(e)}", state="error")
                     st.error(f"An error occurred during scanning: {str(e)}")
-
-        st.write(len(results))
         
         for result in results:
             if result is None:
@@ -154,8 +153,6 @@ def show_scanning_dashboard():
                 st.write(f"{result['last_index']} {result['name']} {result['symbol']} {result['interval']} Entry Signal: {entry_signal}")
             # if exit_signal:
             #     st.write(f"{result['last_index']} {result['name']} {result['symbol']} {result['interval']} Exit Signal: {exit_signal}")
-        
-        st.write(len(results))
 
         # Create tabs for each result
         if results:            
