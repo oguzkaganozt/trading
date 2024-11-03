@@ -32,6 +32,9 @@ class MFI_MACD(Strategy):
         if mfi_prev <= mfi_sma_prev and mfi_current > mfi_sma_current and macd['MACD_12_26_9'].iloc[-1] > macd['MACDs_12_26_9'].iloc[-1]:
             self.logger.debug("MFI crossed above SMA. Entering Long")
             return "long"
+        elif mfi_prev >= mfi_sma_prev and mfi_current < mfi_sma_current and macd['MACD_12_26_9'].iloc[-1] < macd['MACDs_12_26_9'].iloc[-1]:
+            self.logger.debug("MFI crossed below SMA. Entering Short")
+            return "short"
         return False
 
     def check_exit(self):

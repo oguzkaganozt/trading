@@ -29,9 +29,13 @@ class RSI(Strategy):
             self.logger.info("Symbol: " + self.symbol)
             self.logger.info("Interval: " + self.interval)
             self.logger.info("RSI crossed above SMA. Entering Long")
-            self.logger.info(f"RSI: {rsi_current}, RSI SMA: {rsi_sma_current}")
-            self.logger.info(f"RSI PREV: {rsi_prev}, RSI SMA PREV: {rsi_sma_prev}")
             return "long"
+        elif rsi_prev >= rsi_sma_prev and rsi_current < rsi_sma_current:
+            self.logger.info("--------------------------------")
+            self.logger.info("Symbol: " + self.symbol)
+            self.logger.info("Interval: " + self.interval)
+            self.logger.info("RSI crossed below SMA. Entering Short")
+            return "short"
         return False
 
     def check_exit(self):

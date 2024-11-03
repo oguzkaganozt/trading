@@ -32,6 +32,12 @@ class MFI(Strategy):
             self.logger.info(f"MFI: {mfi_current}, MFI SMA: {mfi_sma_current}")
             self.logger.info(f"MFI PREV: {mfi_prev}, MFI SMA PREV: {mfi_sma_prev}")
             return "long"
+        elif mfi_prev >= mfi_sma_prev and mfi_current < mfi_sma_current:
+            self.logger.info("--------------------------------")
+            self.logger.info("Symbol: " + self.symbol)
+            self.logger.info("Interval: " + self.interval)
+            self.logger.info("MFI crossed below SMA. Entering Short")
+            return "short"
         return False
 
     def check_exit(self):
