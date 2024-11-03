@@ -11,13 +11,15 @@ from strategies.mfi_macd import MFI_MACD
 from strategies.macd import MACD
 from strategies.stoch_rsi import STOCH_RSI
 from strategies.stoch_rsi_double import STOCH_RSI_DOUBLE
+from strategies.macd_double import MACD_DOUBLE
 import pandas_ta as ta
 
 strategy_map = {
     "RSI: Giriş: RSI SMA üzerine çıktığında, Çıkış: RSI SMA altına düştüğünde": RSI,
     "MFI: Giriş: MFI SMA üzerine çıktığında, Çıkış: MFI SMA altına düştüğünde": MFI,
     "MFI-MACD: Giriş: MACD pozitif alanda, MFI SMA üzerine çıktığında, Çıkış: MFI SMA altına düştüğünde": MFI_MACD,
-    "MACD: Giriş: Büyük zaman diliminde MACD pozitif alanda, küçük zamanda MACD pozitif kestiğinde. Çıkış: Küçük zaman diliminde MACD negatif kestiğinde": MACD,
+    "MACD: Giriş: MACD pozitif kestiğinde, Çıkış: MACD negatif kestiğinde": MACD,
+    "MACD-DOUBLE: Giriş: Büyük ve küçük zaman diliminde MACD pozitif alanda. Çıkış: Küçük zaman diliminde MACD negatif alanda": MACD_DOUBLE,
     "STOCH-RSI: Giriş: STOCH-RSI pozitif kestiğinde. Çıkış: STOCH-RSI negatif kestiğinde": STOCH_RSI,
     "STOCH-RSI-DOUBLE: Giriş: Büyük ve küçük zaman diliminde STOCH-RSI pozitif alanda. Çıkış: Küçük zaman diliminde STOCH-RSI negatif alanda": STOCH_RSI_DOUBLE
 }
