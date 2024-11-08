@@ -1,10 +1,11 @@
 MANDATORY
-- make use of support and resistance levels in a strategy
+- double strategy support
 - graph row larının otomatik olarak arttırılması yani her indicator için fixed bi row yerine arttırarak koymak
-- dashboard should be turkish
-- implement live simulation dashboard and testing
-- strategy descriptions in mathematical format (e.g. RSI_14 > 50)
+- normal ve parent timefrme graphlarının aynı anda görüntülenmesi
+- make use of support and resistance levels in a strategy
 - implement stop loss with trailing or without trailing
+- dashboard should be english and turkish
+- implement live simulation dashboard and testing
 - implement live trading dashboard and trading
 
 OPTIONAL

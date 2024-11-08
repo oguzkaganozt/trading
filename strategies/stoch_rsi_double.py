@@ -39,7 +39,7 @@ class STOCH_RSI_DOUBLE(Strategy):
         stoch_rsi_current = stoch_rsi.iloc[-2]
         stoch_rsi_parent_current = stoch_rsi_parent.iloc[-2]
 
-        # Check if MACD crosses above its Signal line
+        # Check if STOCH-RSI crossed above its Signal line
         if stoch_rsi_current['STOCHRSIk_14_14_3_3'] > stoch_rsi_current['STOCHRSId_14_14_3_3'] and stoch_rsi_parent_current['STOCHRSIk_14_14_3_3'] > stoch_rsi_parent_current['STOCHRSId_14_14_3_3']:
             self.logger.debug("STOCH-RSI crossed above SMA. Entering Long")
             return "long"
@@ -64,3 +64,4 @@ class STOCH_RSI_DOUBLE(Strategy):
     
     def check_partial_close(self):
         return False
+    
