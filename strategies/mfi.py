@@ -26,17 +26,15 @@ class MFI(Strategy):
         # Check if MFI crosses above its SMA
         if mfi_prev <= mfi_sma_prev and mfi_current > mfi_sma_current:
             self.logger.info("--------------------------------")
-            self.logger.info("Symbol: " + self.symbol)
-            self.logger.info("Interval: " + self.interval)
-            self.logger.info("MFI crossed above SMA. Entering Long")
+            self.logger.info(f"Symbol: {self.symbol} - MFI crossed above SMA. Entering Long")
             self.logger.info(f"MFI: {mfi_current}, MFI SMA: {mfi_sma_current}")
             self.logger.info(f"MFI PREV: {mfi_prev}, MFI SMA PREV: {mfi_sma_prev}")
             return "long"
         elif mfi_prev >= mfi_sma_prev and mfi_current < mfi_sma_current:
             self.logger.info("--------------------------------")
-            self.logger.info("Symbol: " + self.symbol)
-            self.logger.info("Interval: " + self.interval)
-            self.logger.info("MFI crossed below SMA. Entering Short")
+            self.logger.info(f"Symbol: {self.symbol} - MFI crossed below SMA. Entering Short")
+            self.logger.info(f"MFI: {mfi_current}, MFI SMA: {mfi_sma_current}")
+            self.logger.info(f"MFI PREV: {mfi_prev}, MFI SMA PREV: {mfi_sma_prev}")
             return "short"
         return False
 
@@ -54,9 +52,7 @@ class MFI(Strategy):
         # Check if MFI crosses below its SMA
         if mfi_prev >= mfi_sma_prev and mfi_current < mfi_sma_current:
             self.logger.info("--------------------------------")
-            self.logger.info("Symbol: " + self.symbol)
-            self.logger.info("Interval: " + self.interval)
-            self.logger.info("MFI crossed below SMA. Exiting Long")
+            self.logger.info(f"Symbol: {self.symbol} - MFI crossed below SMA. Exiting Long")
             self.logger.info(f"MFI: {mfi_current}, MFI SMA: {mfi_sma_current}")
             self.logger.info(f"MFI PREV: {mfi_prev}, MFI SMA PREV: {mfi_sma_prev}")
             return True

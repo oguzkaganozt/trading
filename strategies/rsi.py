@@ -26,15 +26,15 @@ class RSI(Strategy):
         # Check if RSI crosses above its SMA
         if rsi_prev <= rsi_sma_prev and rsi_current > rsi_sma_current:
             self.logger.info("--------------------------------")
-            self.logger.info("Symbol: " + self.symbol)
-            self.logger.info("Interval: " + self.interval)
-            self.logger.info("RSI crossed above SMA. Entering Long")
+            self.logger.info(f"Symbol: {self.symbol} - RSI crossed above SMA. Entering Long")
+            self.logger.info(f"RSI: {rsi_current}, RSI SMA: {rsi_sma_current}")
+            self.logger.info(f"RSI PREV: {rsi_prev}, RSI SMA PREV: {rsi_sma_prev}")
             return "long"
         elif rsi_prev >= rsi_sma_prev and rsi_current < rsi_sma_current:
             self.logger.info("--------------------------------")
-            self.logger.info("Symbol: " + self.symbol)
-            self.logger.info("Interval: " + self.interval)
-            self.logger.info("RSI crossed below SMA. Entering Short")
+            self.logger.info(f"Symbol: {self.symbol} - RSI crossed below SMA. Entering Short")
+            self.logger.info(f"RSI: {rsi_current}, RSI SMA: {rsi_sma_current}")
+            self.logger.info(f"RSI PREV: {rsi_prev}, RSI SMA PREV: {rsi_sma_prev}")
             return "short"
         return False
 

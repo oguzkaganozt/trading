@@ -12,23 +12,6 @@ class STOCH_RSI(Strategy):
         stoch_rsi = self.data_manager.data.ta.stochrsi(close=self.data_manager.data['close'], append=True)
         stoch_rsi_parent = self.data_manager.data_parent.ta.stochrsi(close=self.data_manager.data_parent['close'], append=True)
 
-        # self.logger.info(stoch_rsi)
-        # self.logger.info(stoch_rsi_parent)
-        # exit()
-        # # Create a new DataFrame with parent MACD data
-        # parent_data = pd.DataFrame(index=self.data_manager.data_parent.index)
-        # parent_data['MACD_12_26_9_Parent'] = macd_parent['MACD_12_26_9']
-        # parent_data['MACDs_12_26_9_Parent'] = macd_parent['MACDs_12_26_9']
-        # parent_data['MACDh_12_26_9_Parent'] = macd_parent['MACDh_12_26_9']
-        
-        # # Reindex parent data to match base timeframe and forward fill
-        # reindexed_parent = parent_data.reindex(self.data_manager.data.index, method='ffill')
-        
-        # # Add parent MACD columns to base timeframe data
-        # self.data_manager.data['MACD_12_26_9_Parent'] = reindexed_parent['MACD_12_26_9_Parent']
-        # self.data_manager.data['MACDs_12_26_9_Parent'] = reindexed_parent['MACDs_12_26_9_Parent']
-        # self.data_manager.data['MACDh_12_26_9_Parent'] = reindexed_parent['MACDh_12_26_9_Parent']
-
         return stoch_rsi, stoch_rsi_parent
 
     def check_entry(self):
